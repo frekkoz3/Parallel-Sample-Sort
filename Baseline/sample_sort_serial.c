@@ -1290,7 +1290,7 @@ print_summary ( options_t     *options,       // runtime options
   printf ("time_sampling_seconds    %.9f\n", timing->sampling);
   printf ("time_partition_seconds   %.9f\n", timing->partitioning);
   printf ("time_merge_seconds       %.9f\n", timing->merging);
-  printf ("time_verify_seconds      %.9f\n", timing->verification);
+  printf ("time_verify_seconds      %.9f\n", timing->sort_verification);
   printf ("time_total_seconds       %.9f\n", timing->total);
 }
 
