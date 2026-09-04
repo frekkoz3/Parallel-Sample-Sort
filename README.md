@@ -42,8 +42,7 @@ quasi-balanced output, but the imbalance does not vanish. Measure max / min / me
 * **Choice of local sort** A radix sort beats a quicksort on uniform 32-bit keys by a factor that depends on the number of passes and the cache  behaviour; on doubles or 64-bit keys, this is no longer obvious. The student picks one, justifies it, and ideally tries two.
 
 * **Cache behaviour of the local sort** Branch-rich sorts (quicksort) and branch-poor sorts (radix) have very different performance signatures. [optional, not covered in course] : Measure with `perf stat -e branch-misses`,cache-misses and explain.
-* **All-to-all is the bottleneck** Show the bandwidth achieved versus the injection rate of the network. Fora node-internal benchmark, compare intra-node `MPI_Alltoallv` against an OpenMP "shared-memory
-all-to-all".
+* **All-to-all is the bottleneck** Show the bandwidth achieved versus the injection rate of the network. For node-internal benchmark, compare intra-node `MPI_Alltoallv` against an OpenMP "shared-memory all-to-all".
 * **Memory allocation** The size of each incoming bucket is not known a priori. The student must exchange sizes first with `MPI_Alltoall`, then allocate, then `MPI_Alltoallv`. Discuss the cost of this two-phase pattern and what could be done if memory pressure is a problem.
 * **$k$-way merge** The naïve approach merges two sorted runs at a time, $O(PlogP)$ passes through the data. A tournament tree / heap-based $k$-way merge does it in a single pass but with extra branch overhead. Measure.
 * **Imbalance vs replication** With regular sampling on a uniform input, the worst-case bucket size is bounded by roughly $2N/P$ (classical result). Verify the bound empirically and discuss when it can be violated.
