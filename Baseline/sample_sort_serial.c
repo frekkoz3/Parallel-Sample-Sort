@@ -953,7 +953,7 @@ compute_bucket_starts ( size_t        *bounds,          // source/destination bo
   Merge all sorted incoming streams for one destination bucket.
   The code scans all current stream heads to find the next key.
   This is clear but maybe not optimal.
-  This is the place to possible compare different marging strategies
+  This is the place to possible compare different merging strategies
 */
 static void
 merge_destination_bucket ( sort_key_t    *keys,          // source sorted chunks
