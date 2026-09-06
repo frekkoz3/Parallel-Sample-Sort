@@ -1,2 +1,3 @@
 Baseline/sample_sort_serial
 Parallel/sample_sort_omp
+.vscode

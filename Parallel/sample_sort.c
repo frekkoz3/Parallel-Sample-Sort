@@ -1,30 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 /*
-  Serial sample-sort baseline for the HPC final-exam exercise.
-
-  This program is intentionally serial.  It mirrors the structure of the
-  distributed sample-sort algorithm using a configurable number of "virtual
-  ranks": each virtual rank owns one chunk, sorts it, selects regular samples,
-  partitions the sorted chunk into buckets, and contributes those buckets to a
-  final k-way merge.
-
-  The goal is not to provide the fastest possible serial integer sorter, but just 
-  a readable, correct starting point that already has the same algorithmic checkpoints
-  as the later MPI + OpenMP code:
-
-    1. local sort;
-    2. regular sampling;
-    3. pivot selection;
-    4. bucket partitioning;
-    5. exchange-like bucket redistribution;
-    6. final merge of sorted incoming streams.
-
-  The local sort is a straightforward bottom-up merge sort.  The final k-way
-  merge is deliberately naive: it scans the head of every incoming stream to
-  find the next key.
-  What an be done there? What different data structures/algorithm that you have seen
- in other coursed? what about memory traffic and impact of branching?
+  Sample-sort for the HPC final-exam exercise.
 */
 
 #include <errno.h>
@@ -42,6 +19,7 @@
 #define DEFAULT_OVERSAMPLE     (1ULL)
 #define DEFAULT_SEED           (1ULL)
 #define DEFAULT_DISTRIBUTION   "uniform"
+#define DEFAULT_SORT           "merge"
 #define DEFAULT_PRINT_LIMIT    (0ULL)
 
 
@@ -65,8 +43,15 @@ typedef enum
   DISTRIBUTION_ALMOST_SORTED
 } distribution_t;
 
+typedef enum{
+  MERGE_SORT,
+  HEAP_SORT,            // not implemented
+  OPTIMIZED_MERGE_SORT, // not implemented
+  QUICK_SORT            // not implemented
+} base_sorting;
+
 /*
-  Runtime options for the serial baseline. Guess what?  nbuckets plays the role of the
+  Runtime options for the parallel implemtation. Guess what?  nbuckets plays the role of the
   number of MPI processes in the future distributed implementation, but here it
   only controls how the single array is split into virtual chunks.
 */
@@ -78,6 +63,8 @@ typedef struct
   uint64_t          seed;
   distribution_t    distribution;
   char             *distribution_name;
+  base_sorting      sorting;
+  char             *sorting_name;
   size_t            print_limit;
 } options_t;
 
@@ -134,6 +121,7 @@ print_usage ( char     *program_name   // executable name from argv[0]
            "  --oversample VALUE     regular samples per virtual rank multiplier (%llu)\n"
            "  --seed VALUE           random seed for generated inputs            (%llu)\n"
            "  --distribution NAME    uniform | skewed | few-unique | sorted | reverse | almost-sorted (%s)\n"
+           "  --sorting NAME         merge | opt_merge | quick | heap (%s)\n"
            "  --print-limit VALUE    print the first VALUE sorted keys           (%llu)\n"
            "  --help                 show this help message\n"
            "\n"
@@ -146,6 +134,7 @@ print_usage ( char     *program_name   // executable name from argv[0]
            (unsigned long long) DEFAULT_OVERSAMPLE,
            (unsigned long long) DEFAULT_SEED,
            DEFAULT_DISTRIBUTION,
+           DEFAULT_SORT,
            (unsigned long long) DEFAULT_PRINT_LIMIT,
            program_name,
            program_name);
@@ -164,6 +153,8 @@ set_default_options ( options_t   *options   // output options structure
   options->seed              = DEFAULT_SEED;
   options->distribution      = DISTRIBUTION_UNIFORM;
   options->distribution_name = DEFAULT_DISTRIBUTION;
+  options->sorting           = MERGE_SORT;
+  options->sorting_name      = DEFAULT_SORT;
   options->print_limit       = (size_t) DEFAULT_PRINT_LIMIT;
 }
 
@@ -211,6 +202,39 @@ parse_distribution_name (char           *name,          // user-provided distrib
   if (strcmp (name, "almost-sorted") == 0 || strcmp (name, "almostsorted") == 0)
     {
       *distribution = DISTRIBUTION_ALMOST_SORTED;
+      return 0;
+    }
+
+  fprintf (stderr, "Unknown distribution '%s'\n", name);
+  return -1;
+}
+
+static int
+parse_sort_name         (char           *name,          // user-provided sort name
+                         base_sorting   *sorting   // parsed sort enum
+			 )
+{
+  if (strcmp (name, "merge") == 0)
+    {
+      *sorting = MERGE_SORT;
+      return 0;
+    }
+
+  if (strcmp (name, "opt_merge") == 0)
+    {
+      *sorting = OPTIMIZED_MERGE_SORT;
+      return 0;
+    }
+
+  if (strcmp (name, "quick") == 0)
+    {
+      *sorting = QUICK_SORT;
+      return 0;
+    }
+
+  if (strcmp (name, "heap") == 0)
+    {
+      *sorting = HEAP_SORT;
       return 0;
     }
 
@@ -374,6 +398,20 @@ parse_options ( int          argc,      // number of command-line tokens
           options->distribution_name = argv[i + 1];
           i += 1;
         }
+      else if (strcmp (argv[i], "--sorting") == 0)
+        {
+          if (i + 1 >= argc)
+            {
+              fprintf (stderr, "Missing value after %s\n", argv[i]);
+              return -1;
+            }
+
+          if (parse_sort_name (argv[i + 1], &options->sorting) != 0)
+            return -1;
+
+          options->sorting_name = argv[i + 1];
+          i += 1;
+        }
       else if (strcmp (argv[i], "--print-limit") == 0)
         {
           if (parse_size_option (argc, argv, &i, &options->print_limit) != 0)
@@ -392,7 +430,7 @@ parse_options ( int          argc,      // number of command-line tokens
 
 /*
   Validate the option values after parsing.
-  In real codes you should always validate the input, t avoid wasting time
+  In real codes you should always validate the input, to avoid wasting time
   with runs that either crash or are non-sense
 */
 static int
@@ -813,19 +851,39 @@ static void
 sort_virtual_chunks ( sort_key_t    *keys,       // key array split into virtual chunks
                       sort_key_t    *scratch,    // temporary array for merge sort
                       size_t         nkeys,      // total number of keys
-                      unsigned int   nchunks     // number of virtual chunks
+                      unsigned int   nchunks,    // number of virtual chunks
+                      base_sorting   sort_algo   // sorting algorithm
 		    )
 {
   unsigned int rank;
   size_t       begin;
   size_t       end;
   // no OMP here : here we will use "MPI" (each chunk = one node. totally living they're best life independently)
-  for (rank = 0; rank < nchunks; rank++)
+  if (sort_algo == MERGE_SORT){
+    for (rank = 0; rank < nchunks; rank++)
     {
       begin = chunk_begin (nkeys, nchunks, rank);
       end = chunk_end (nkeys, nchunks, rank);
-      merge_sort_omp (keys, scratch, begin, end); // this is local and can be optimized via OMP
+      merge_sort_omp (keys, scratch, begin, end);
     }
+  }
+  else if (sort_algo == OPTIMIZED_MERGE_SORT)
+  {
+    for (rank = 0; rank < nchunks; rank++)
+    {
+      begin = chunk_begin (nkeys, nchunks, rank);
+      end = chunk_end (nkeys, nchunks, rank);
+      // opt_merge_sort_omp (keys, scratch, begin, end);
+    }
+  }
+  else if (sort_algo == QUICK_SORT)
+  {
+    // quick_sort_omp();
+  }
+  else if (sort_algo == HEAP_SORT)
+  {
+    // heap_sort_omp();
+  }
 }
 
 /*
@@ -1248,7 +1306,7 @@ sample_sort        ( sort_key_t    *keys,          // input keys, modified by lo
   // sort your local chunk
   
   t0 = wall_seconds ();
-  sort_virtual_chunks (keys, scratch, nkeys, options->nbuckets);
+  sort_virtual_chunks (keys, scratch, nkeys, options->nbuckets, options->sorting);
   t1 = wall_seconds ();
   timing->local_sort = t1 - t0;
 
@@ -1276,7 +1334,7 @@ sample_sort        ( sort_key_t    *keys,          // input keys, modified by lo
 
   t0 = wall_seconds ();
   select_regular_samples (keys, nkeys, options->nbuckets, samples_per_chunk, samples);
-  merge_sort_omp       (samples, sample_scratch, 0, nsamples);
+  merge_sort_omp       (samples, sample_scratch, 0, nsamples); // this is fixed to a merge_sort. this contains P^2 values, this is certainly not a bottleneck
   choose_global_pivots   (samples, samples_per_chunk, options->nbuckets, pivots);
   t1 = wall_seconds ();
   timing->sampling = t1 - t0;
@@ -1334,6 +1392,7 @@ print_summary ( options_t     *options,       // runtime options
   printf ("virtual_ranks            %u\n", options->nbuckets);
   printf ("oversample               %zu\n", options->oversample);
   printf ("distribution             %s\n", options->distribution_name);
+  printf ("local sorting algorithm  %s\n", options->sorting_name);
   printf ("seed                     %" PRIu64 "\n", options->seed);
   printf ("sorted_ok                %s\n", sorted_ok ? "yes" : "no");
   printf ("multiset_signature_ok    %s\n", signature_ok ? "yes" : "no");
