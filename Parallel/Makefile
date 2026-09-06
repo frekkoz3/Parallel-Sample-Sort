@@ -4,7 +4,8 @@ LDFLAGS ?=
 LDLIBS  ?= -fopenmp
 
 TARGET  = sample_sort_omp
-SRC     = sample_sort.c
+SRCS    = main.c parser.c utils.c local_sort.c sample_sort.c
+OBJS    = $(SRCS:.c=.o)
 
 # Default number of threads for execution targets
 THREADS ?= 16
@@ -13,8 +14,11 @@ THREADS ?= 16
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LDLIBS)
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 run: $(TARGET)
 	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 1000000 --nbuckets 8 --distribution uniform
@@ -28,4 +32,4 @@ check: $(TARGET)
 	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000 --nbuckets 8 --distribution almost-sorted
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(OBJS) $(TARGET)
