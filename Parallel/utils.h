@@ -27,7 +27,7 @@ typedef enum {
 
 typedef enum {
   MERGE_SORT,
-  HEAP_SORT,
+  RADIX_SORT,
   OPTIMIZED_MERGE_SORT,
   QUICK_SORT
 } base_sorting;
