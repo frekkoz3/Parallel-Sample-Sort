@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+// #include <mpi.h>
 
 #define DEFAULT_NKEYS          (1000000ULL)
 #define DEFAULT_NBUCKETS       (8u)
@@ -12,9 +13,22 @@
 #define DEFAULT_SEED           (1ULL)
 #define DEFAULT_DISTRIBUTION   "uniform"
 #define DEFAULT_SORT           "merge"
+#define DEFAULT_RADIX_BITS     (8u)
 #define DEFAULT_PRINT_LIMIT    (0ULL)
 
-typedef uint64_t sort_key_t;
+// Select type based on compile-time flag
+#ifdef USE_UINT32
+    typedef uint32_t sort_key_t;
+    #define MPI_SORT_KEY_T MPI_UINT32_T
+    #define PRI_KEY PRIu32
+    #define N_BITS 32
+#else
+    // Default to 64-bit
+    typedef uint64_t sort_key_t;
+    #define MPI_SORT_KEY_T MPI_UINT64_T
+    #define PRI_KEY PRIu64
+    #define N_BITS 64
+#endif
 
 typedef enum {
   DISTRIBUTION_UNIFORM,
@@ -46,6 +60,7 @@ typedef struct {
   char             *distribution_name;
   base_sorting      sorting;
   char             *sorting_name;
+  int               radix_bits;
   size_t            print_limit;
 } options_t;
 

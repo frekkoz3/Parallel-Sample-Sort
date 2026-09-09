@@ -2,6 +2,7 @@ CC      ?= gcc
 CFLAGS  ?= -std=c11 -O3 -Wall -Wextra -pedantic -fopenmp
 LDFLAGS ?=
 LDLIBS  ?= -fopenmp
+BITSIZE ?= #-DUSE_UINT32 # for 32 bits keys
 
 TARGET  = sample_sort_omp
 SRCS    = main.c parser.c utils.c local_sort.c sample_sort.c
@@ -15,10 +16,10 @@ THREADS ?= 16
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+	$(CC) $(CFLAGS) $(BITSIZE) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(BITSIZE) -c $< -o $@
 
 run: $(TARGET)
 	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 1000000 --nbuckets 8 --distribution uniform
