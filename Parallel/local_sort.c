@@ -237,20 +237,20 @@ static void radix_sort_range(sort_key_t *data,
 /*
   Parallel Radix Sort for data[begin:end) using OpenMP.
 */
-void radix_sort_omp(sort_key_t *data, 
-                    sort_key_t *scratch, 
-                    size_t begin, 
+void radix_sort_omp(sort_key_t *data,
+                    sort_key_t *scratch,
+                    size_t begin,
                     size_t end,
-                    int digit_bits
-                   ) 
+                    int digit_bits)
 {
     int n_buckets = (1 << digit_bits);
     int mask = n_buckets - 1;
 
     size_t n = end - begin;
-    if (n <= 1) return;
 
-    // Fall back to serial sort for small datasets to avoid parallel overhead
+    if (n <= 1)
+        return;
+
     if (n < 1024) {
         radix_sort_range(data, scratch, begin, end, digit_bits);
         return;
@@ -258,90 +258,176 @@ void radix_sort_omp(sort_key_t *data,
 
     sort_key_t *src = data + begin;
     sort_key_t *dst = scratch + begin;
-    
-    // in this moment this work only when digit_bits is an exact divisor of N_BITS  !!!
-    int total_digits = (int)(sizeof(sort_key_t) * 8 / digit_bits);
+
+    int total_digits =
+        (int)(sizeof(sort_key_t) * 8 / digit_bits);
+
+    /*
+     * Gl[t][b] = number of elements owned by thread t
+     *            that belong to bucket b.
+     */
+    size_t **Gl = NULL;
+
+    /*
+     * bucket_base[b] = global starting position of bucket b.
+     */
+    size_t *bucket_base = NULL;
 
     #pragma omp parallel
     {
         int tid = omp_get_thread_num();
         int nthreads = omp_get_num_threads();
 
-        // Allocate local thread accumulation arrays on stack
+        /*
+         * Private per-thread arrays.
+         */
         size_t local_count[n_buckets];
         size_t local_offset[n_buckets];
 
-        // Shared matrix for thread counts: Gl[thread_id][bucket]
-        static size_t **Gl = NULL;
-
+        /*
+         * Allocate shared structures once.
+         */
         #pragma omp single
         {
             Gl = (size_t **)malloc(nthreads * sizeof(size_t *));
+
             for (int t = 0; t < nthreads; t++) {
-                // Ensure alignment to 64-byte cache line (assumptuion on the cache-line dimension)
-                posix_memalign((void **)&Gl[t], 64, n_buckets * sizeof(size_t));
+                posix_memalign((void **)&Gl[t],
+                               64,
+                               n_buckets * sizeof(size_t));
             }
+
+            posix_memalign((void **)&bucket_base,
+                           64,
+                           n_buckets * sizeof(size_t));
         }
+
+        #pragma omp barrier
         
+        /*
+         * Count Sort
+        */
         for (int dig = 0; dig < total_digits; dig++) {
-            memset(local_count, 0, n_buckets * sizeof(size_t));
-            // count sort
+
+            /*
+             * Local histograms
+             */
+
+            memset(local_count,
+                   0,
+                   n_buckets * sizeof(size_t));
+
             #pragma omp for schedule(static)
             for (size_t i = 0; i < n; i++) {
-                unsigned int bucket = get_digit(src[i], dig, digit_bits, mask);
+
+                unsigned int bucket =
+                    get_digit(src[i],
+                              dig,
+                              digit_bits,
+                              mask);
+
                 local_count[bucket]++;
             }
 
-            // Copy thread local counts to shared Gl matrix
+            /*
+             * Local histograms to Global
+             */
+
             for (int b = 0; b < n_buckets; b++) {
                 Gl[tid][b] = local_count[b];
             }
 
-            #pragma omp barrier // wait for everyone to synch
+            #pragma omp barrier
 
-            // Parallel Prefix Sum (Compute starting write positions per bucket & thread)
-            for (int b = 0; b < n_buckets; b++) {
+            /*
+             * Compute global bucket starting positions
+             *
+             * bucket_base[b] =
+             *     number of elements belonging to
+             *     buckets smaller than b.
+             */
+
+            #pragma omp single
+            {
                 size_t sum = 0;
-                // Sum all preceding buckets across all threads
-                for (int prev_b = 0; prev_b < b; prev_b++) {
+
+                for (int b = 0; b < n_buckets; b++) {
+
+                    bucket_base[b] = sum;
+
                     for (int t = 0; t < nthreads; t++) {
-                        sum += Gl[t][prev_b];
+                        sum += Gl[t][b];
                     }
                 }
-                // Add preceding threads for the CURRENT bucket
-                for (int t = 0; t < tid; t++) {
-                    sum += Gl[t][b];
-                }
-                local_offset[b] = sum;
             }
 
-            // Scatter Step into destination array
+            #pragma omp barrier
+
+            /*
+             * Compute this thread's starting offset
+             * inside every bucket.
+             */
+
+            for (int b = 0; b < n_buckets; b++) {
+
+                size_t offset = bucket_base[b];
+
+                for (int t = 0; t < tid; t++) {
+                    offset += Gl[t][b];
+                }
+
+                local_offset[b] = offset;
+            }
+
+            /*
+             * Scatter
+             */
+
             #pragma omp for schedule(static)
             for (size_t i = 0; i < n; i++) {
-                unsigned int bucket = get_digit(src[i], dig, digit_bits, mask);
-                dst[local_offset[bucket]++] = src[i]; // increment local_offset[bucket] after the access
+
+                unsigned int bucket =
+                    get_digit(src[i],
+                              dig,
+                              digit_bits,
+                              mask);
+
+                dst[local_offset[bucket]++] = src[i];
             }
 
-            // Pointer Swap for Next Pass
+            /*
+             * Ping-pong buffers
+             */
+
             #pragma omp single
             {
                 sort_key_t *tmp = src;
                 src = dst;
                 dst = tmp;
-            } // Implicit barrier
+            }
+
+            // Implicit Barrier Here !!
         }
 
-        // Copy back if final pass ended up in scratch array
+        
+        /*
+         * This is done to ensure the results are in src
+         * (Could not be the case for the pingpong style)
+        */
         #pragma omp single
         {
             if (src != data + begin) {
-                memcpy(data + begin, scratch + begin, n * sizeof(sort_key_t));
+                memcpy(data + begin,
+                       src,
+                       n * sizeof(sort_key_t));
             }
 
             for (int t = 0; t < nthreads; t++) {
                 free(Gl[t]);
             }
+
             free(Gl);
+            free(bucket_base);
         }
     }
 }
