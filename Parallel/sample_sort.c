@@ -328,14 +328,27 @@ void sample_sort (       sort_key_t    *keys,          // input keys, modified b
   nsamples          = samples_per_chunk * (size_t) options->nbuckets;
 
   samples        = malloc_array (nsamples, sizeof (sort_key_t));
-  sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
   pivots         = malloc_array ((size_t) options->nbuckets - 1, sizeof (sort_key_t));
   bounds         = malloc_array ((size_t) options->nbuckets * ((size_t) options->nbuckets + 1), sizeof (size_t));
   bucket_starts  = malloc_array ((size_t) options->nbuckets + 1, sizeof (size_t));
 
   t0 = wall_seconds ();
   select_regular_samples (keys, nkeys, options->nbuckets, samples_per_chunk, samples);
-  merge_sort_omp (samples, sample_scratch, 0, nsamples);
+  
+  base_sorting sort_algo = (base_sorting)options->sorting;
+  if (sort_algo == MERGE_SORT) {
+    sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
+    merge_sort_omp (samples, sample_scratch, 0, nsamples);
+  }
+  if (sort_algo == RADIX_SORT){
+    sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
+    int digit_bits = (int)options->radix_bits;
+    radix_sort_omp (samples, sampl_scratch, 0, nsample, digit_bits);
+  }
+  if (sort_algo == QUICK_SORT){
+    quick_sort_omp (samples, 0, nsamples);
+  }
+  
   choose_global_pivots (samples, samples_per_chunk, options->nbuckets, pivots);
   t1 = wall_seconds ();
   timing->sampling = t1 - t0;
