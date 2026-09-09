@@ -127,6 +127,14 @@ merge_sort_range ( sort_key_t *data,      // array containing the range to sort
 
 /*
   Sort data[begin:end) with a recursive parallel bottom-up merge sort.
+  This implementation could be improved by using the "pingpong technique" (this is done in the radix sort)
+
+  The idea is that one pass the input are in data and the output in scratch
+  while the following pass the input are in scratch and the output in data
+
+  This prevent to copy each pass the entire range back from scratch to data
+  
+  This technique almost halves the memory movement
 */
 static
 void merge_sort_omp_rec ( sort_key_t *data,      // array containing the range to sort
@@ -167,7 +175,7 @@ void merge_sort_omp (sort_key_t *data,      // array containing the range to sor
   size_t cutoff = 1024;
   #pragma omp parallel
   {
-    #pragma omp single
+    #pragma omp single // only one thread must init the recursion !!!
     merge_sort_omp_rec (data, scratch, begin, end, cutoff);
   }
 }
@@ -433,6 +441,29 @@ void radix_sort_omp(sort_key_t *data,
 }
 
 /*
+  Serial quick_sort helper for a single range [begin, end]
+*/
+static void quick_sort_range(sort_key_t *data,      // array containing the range to sort
+                             sort_key_t *scratch,   // temporary array with at least end elements
+                             size_t      begin,     // first index of the sorted range
+                             size_t      end        // one-past-last index of the sorted range
+                            )
+{
+  continue; // todo
+}
+
+/*
+Parallel Quick Sort for data[begin:end] using OpenMP.
+*/
+void quick_sort_omp(sort_key_t *data,      // array containing the range to sort
+                     sort_key_t *scratch,   // temporary array with at least end elements
+                     size_t      begin,     // first index of the sorted range
+                     size_t      end        // one-past-last index of the sorted range
+                    )
+{
+  continue; // todo
+}
+/*
   Sort each virtual rank's local chunk independently.
 */
 void sort_virtual_chunks (sort_key_t    *keys,        // key array split into virtual chunks
@@ -458,13 +489,13 @@ void sort_virtual_chunks (sort_key_t    *keys,        // key array split into vi
       radix_sort_omp (keys, scratch, begin, end, digit_bits);
     }
   }
-  /*if (sort_algo == QUICK_SORT){
+  if (sort_algo == QUICK_SORT){
     for (unsigned int rank = 0; rank < nchunks; rank++){
       size_t begin = chunk_begin (nkeys, nchunks, rank);
       size_t end = chunk_end (nkeys, nchunks, rank);
       quick_sort_omp (keys, scratch, begin, end);
     }
-  }*/
+  }
   // TO IMPLEMENT THE REMAINING OTHERS:
   // quick sort
 }
