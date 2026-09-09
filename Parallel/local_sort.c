@@ -201,7 +201,7 @@ static void radix_sort_range(sort_key_t *data,
     sort_key_t *src = data + begin;
     sort_key_t *dst = scratch + begin;
 
-    // Number of passes needed for sort_key_t (e.g., 8 passes for uint64_t with 8-bit digits)
+    // in this moment this work only when digit_bits is an exact divisor of N_BITS  !!!
     int total_digits = (int)(sizeof(sort_key_t) * 8 / digit_bits);
 
     for (int dig = 0; dig < total_digits; dig++) {
@@ -258,7 +258,8 @@ void radix_sort_omp(sort_key_t *data,
 
     sort_key_t *src = data + begin;
     sort_key_t *dst = scratch + begin;
-
+    
+    // in this moment this work only when digit_bits is an exact divisor of N_BITS  !!!
     int total_digits = (int)(sizeof(sort_key_t) * 8 / digit_bits);
 
     #pragma omp parallel

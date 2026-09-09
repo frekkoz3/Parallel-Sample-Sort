@@ -228,7 +228,8 @@ validate_options ( options_t   *options   // parsed options to validate
 {
   if (options->nkeys == 0 || options->nbuckets == 0 || options->oversample == 0) return -1;
   if ((size_t) options->nbuckets > options->nkeys) return -1;
-  if ((size_t) options->radix_bits > N_BITS) return -1; // maximum number of digits = 
+  if ((size_t) options->radix_bits > N_BITS) return -1; // maximum number of digits < N_BITS
+  if (N_BITS % (size_t) options->radix_bits != 0) return -1; // the radix_bits must be a divisor of N_BITS
   if (options->nbuckets > 1) {
     if (options->oversample > SIZE_MAX / (size_t) (options->nbuckets - 1)) return -1;
     size_t samples_per_chunk = options->oversample * (size_t) (options->nbuckets - 1);
