@@ -466,6 +466,5 @@ void sort_virtual_chunks (sort_key_t    *keys,        // key array split into vi
     }
   }*/
   // TO IMPLEMENT THE REMAINING OTHERS:
-  // otpimized merge sort
   // quick sort
 }

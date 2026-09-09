@@ -26,7 +26,7 @@ print_usage ( char     *program_name   // executable name from argv[0]
            "  --oversample VALUE     regular samples per virtual rank multiplier (%llu)\n"
            "  --seed VALUE           random seed for generated inputs            (%llu)\n"
            "  --distribution NAME    uniform | skewed | few-unique | sorted | reverse | almost-sorted (%s)\n"
-           "  --sorting NAME         merge | opt_merge | quick | radix (%s)\n"
+           "  --sorting NAME         merge | quick | radix (%s)\n"
            "  --radix_bits VALUE     digit size for radix sort (%d)\n"
            "  --print-limit VALUE    print the first VALUE sorted keys           (%llu)\n"
            "  --help                 show this help message\n\n",
@@ -83,7 +83,6 @@ static int parse_sort_name (char           *name,          // user-provided dist
                             )
 {
   if (strcmp (name, "merge") == 0) { *sorting = MERGE_SORT; return 0; }
-  if (strcmp (name, "opt_merge") == 0) { *sorting = OPTIMIZED_MERGE_SORT; return 0; }
   if (strcmp (name, "quick") == 0) { *sorting = QUICK_SORT; return 0; }
   if (strcmp (name, "radix") == 0) { *sorting = RADIX_SORT; return 0; }
   fprintf (stderr, "Unknown distribution '%s'\n", name);
