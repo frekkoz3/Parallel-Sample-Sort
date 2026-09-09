@@ -3,13 +3,15 @@
 
 #include "utils.h"
 
+#define DEFAULT_SERIAL_CUTOFF 1024
+
 // MERGE SORT
 
 size_t chunk_begin (const size_t nkeys, const unsigned int nchunks, const unsigned int chunk_id);
 size_t chunk_end (const size_t nkeys, const unsigned int nchunks, const unsigned int chunk_id);
 void merge_sort_omp (sort_key_t *data, sort_key_t *scratch, size_t begin, size_t end);
 void radix_sort_omp (sort_key_t *data, sort_key_t *scratch, size_t begin, size_t end, int digit_bits);
-void quick_sort_omp (sort_key_t *data, sort_key_t *scratch, size_t begin, size_t end);
+void quick_sort_omp (sort_key_t *data, size_t begin, size_t end);
 void sort_virtual_chunks (sort_key_t *keys, sort_key_t *scratch, size_t nkeys, options_t *options);
 
 #endif /* LOCAL_SORT_H */

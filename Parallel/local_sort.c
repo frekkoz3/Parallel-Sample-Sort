@@ -133,29 +133,28 @@ merge_sort_range ( sort_key_t *data,      // array containing the range to sort
   while the following pass the input are in scratch and the output in data
 
   This prevent to copy each pass the entire range back from scratch to data
-  
+
   This technique almost halves the memory movement
 */
 static
 void merge_sort_omp_rec ( sort_key_t *data,      // array containing the range to sort
                           sort_key_t *scratch,   // temporary array with at least end elements
                           size_t      begin,     // first index of the sorted range
-                          size_t      end,       // one-past-last index of the sorted range
-                          size_t      cutoff     // minimum size to make the serial implementation kick-in
+                          size_t      end       // one-past-last index of the sorted range
                    )
 {
   if (end - begin <= 1) return;
-  if (end - begin <= cutoff) {
+  if (end - begin <= DEFAULT_SERIAL_CUTOFF) {
     merge_sort_range (data, scratch, begin, end);
     return;
   }
   size_t mid = begin + (end - begin) / 2;
 
   #pragma omp task shared(data, scratch)
-  merge_sort_omp_rec (data, scratch, begin, mid, cutoff);
+  merge_sort_omp_rec (data, scratch, begin, mid);
 
   #pragma omp task shared(data, scratch)
-  merge_sort_omp_rec (data, scratch, mid, end, cutoff);
+  merge_sort_omp_rec (data, scratch, mid, end);
 
   #pragma omp taskwait
   merge_runs (data, scratch, begin, mid, end);
@@ -172,13 +171,18 @@ void merge_sort_omp (sort_key_t *data,      // array containing the range to sor
                      size_t      end        // one-past-last index of the sorted range
                     )
 {
-  size_t cutoff = 1024;
   #pragma omp parallel
   {
     #pragma omp single // only one thread must init the recursion !!!
-    merge_sort_omp_rec (data, scratch, begin, end, cutoff);
+    merge_sort_omp_rec (data, scratch, begin, end);
   }
 }
+
+/* 
+   : ------------------------------------------------------ :
+   : RADIX SORT                                             :
+   : ------------------------------------------------------ :
+*/ 
 
 /* 
    Extracts a specific digit (8 bits) from a key.
@@ -259,7 +263,7 @@ void radix_sort_omp(sort_key_t *data,
     if (n <= 1)
         return;
 
-    if (n < 1024) {
+    if (n < DEFAULT_SERIAL_CUTOFF) {
         radix_sort_range(data, scratch, begin, end, digit_bits);
         return;
     }
@@ -441,28 +445,124 @@ void radix_sort_omp(sort_key_t *data,
 }
 
 /*
-  Serial quick_sort helper for a single range [begin, end]
+  Helper to swap two elements
 */
-static void quick_sort_range(sort_key_t *data,      // array containing the range to sort
-                             sort_key_t *scratch,   // temporary array with at least end elements
-                             size_t      begin,     // first index of the sorted range
-                             size_t      end        // one-past-last index of the sorted range
-                            )
+static void swap(sort_key_t *a,
+                 sort_key_t *b
+                )
 {
-  continue; // todo
+    sort_key_t temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+/* 
+   : ------------------------------------------------------ :
+   : QUICK SORT                                             :
+   : ------------------------------------------------------ :
+*/ 
+
+/*
+  Partition data[begin:end).
+  Returns the final position of the pivot.
+*/
+static size_t partition(sort_key_t *arr,
+                        size_t begin, 
+                        size_t end
+                      )
+{
+    sort_key_t pivot = arr[begin];
+
+    size_t i = begin + 1;
+    size_t j = end - 1;
+
+    while (1) {
+
+        while (i <= j && arr[i] <= pivot) {
+            i++;
+        }
+
+        while (i <= j && arr[j] > pivot) {
+            j--;
+        }
+
+        if (i >= j) {
+            break;
+        }
+
+        swap(&arr[i], &arr[j]);
+        i++;
+        j--;
+    }
+
+    swap(&arr[begin], &arr[j]);
+
+    return j;
 }
 
 /*
-Parallel Quick Sort for data[begin:end] using OpenMP.
+  Serial quick sort for data[begin:end)
 */
-void quick_sort_omp(sort_key_t *data,      // array containing the range to sort
-                     sort_key_t *scratch,   // temporary array with at least end elements
-                     size_t      begin,     // first index of the sorted range
-                     size_t      end        // one-past-last index of the sorted range
-                    )
+static void quick_sort_range(sort_key_t *data,
+                             size_t begin,
+                             size_t end)
 {
-  continue; // todo
+    if (end - begin <= 1) {
+        return;
+    }
+    // could be improved with a MoM strategy
+    size_t mid = begin + (end - begin) / 2;
+    swap(&data[begin], &data[mid]);
+    size_t pi = partition(data, begin, end);
+
+    quick_sort_range(data, begin, pi);
+    quick_sort_range(data, pi + 1, end);
 }
+
+/*
+  Parallel quick sort helper for data[begin:end)
+*/
+static void quick_sort_omp_rec(sort_key_t *data,
+                               size_t begin,
+                               size_t end)
+{
+    if (end - begin <= 1) {
+        return;
+    }
+
+    if (end - begin < DEFAULT_SERIAL_CUTOFF) {
+        quick_sort_range(data, begin, end);
+        return;
+    }
+    // could be improved with a MoM strategy
+    size_t mid = begin + (end - begin) / 2;
+    swap(&data[begin], &data[mid]);
+    size_t pi = partition(data, begin, end);
+
+    #pragma omp task
+    quick_sort_omp_rec(data, begin, pi);
+
+    #pragma omp task // could we remove this since the father is just idle?
+    quick_sort_omp_rec(data, pi + 1, end);
+
+    #pragma omp taskwait
+}
+
+/*
+  Entry point for parallel quick sort
+*/
+void quick_sort_omp(sort_key_t *data,
+                    size_t begin,
+                    size_t end)
+{
+    #pragma omp parallel
+    {
+        #pragma omp single
+        quick_sort_omp_rec(data, begin, end);
+        
+    }
+}
+
 /*
   Sort each virtual rank's local chunk independently.
 */
@@ -493,9 +593,7 @@ void sort_virtual_chunks (sort_key_t    *keys,        // key array split into vi
     for (unsigned int rank = 0; rank < nchunks; rank++){
       size_t begin = chunk_begin (nkeys, nchunks, rank);
       size_t end = chunk_end (nkeys, nchunks, rank);
-      quick_sort_omp (keys, scratch, begin, end);
+      quick_sort_omp (keys, begin, end);
     }
   }
-  // TO IMPLEMENT THE REMAINING OTHERS:
-  // quick sort
 }
