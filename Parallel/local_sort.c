@@ -175,8 +175,8 @@ void merge_sort_omp (sort_key_t *data,      // array containing the range to sor
 /* 
    Extracts a specific digit (8 bits) from a key.
 */
-static inline unsigned int get_digit(sort_key_t key, int digit_index) {
-    return (unsigned int)((key >> (digit_index * RADIX_BITS)) & MASK);
+static inline unsigned int get_digit(sort_key_t key, int digit_index, int digit_bits, int mask) {
+    return (unsigned int)((key >> (digit_index * digit_bits)) & mask);
 }
 
 /*
@@ -185,35 +185,40 @@ static inline unsigned int get_digit(sort_key_t key, int digit_index) {
 static void radix_sort_range(sort_key_t *data, 
                              sort_key_t *scratch, 
                              size_t begin, 
-                             size_t end) 
+                             size_t end,
+                             int digit_bits
+                             )
 {
+    int n_buckets = (1 << digit_bits);
+    int mask = n_buckets - 1;
+
     size_t n = end - begin;
     if (n <= 1) return;
 
-    size_t count[NBUCKETS];
-    size_t offset[NBUCKETS];
+    size_t count[n_buckets];
+    size_t offset[n_buckets];
     
     sort_key_t *src = data + begin;
     sort_key_t *dst = scratch + begin;
 
     // Number of passes needed for sort_key_t (e.g., 8 passes for uint64_t with 8-bit digits)
-    int total_digits = (int)(sizeof(sort_key_t) * 8 / RADIX_BITS);
+    int total_digits = (int)(sizeof(sort_key_t) * 8 / digit_bits);
 
     for (int dig = 0; dig < total_digits; dig++) {
-        memset(count, 0, NBUCKETS * sizeof(size_t));
+        memset(count, 0, n_buckets * sizeof(size_t));
 
         for (size_t i = 0; i < n; i++) {
-            unsigned int bucket = get_digit(src[i], dig);
+            unsigned int bucket = get_digit(src[i], dig, digit_bits, mask);
             count[bucket]++;
         }
 
         offset[0] = 0;
-        for (int b = 1; b < NBUCKETS; b++) {
+        for (int b = 1; b < n_buckets; b++) {
             offset[b] = offset[b - 1] + count[b - 1];
         }
 
         for (size_t i = 0; i < n; i++) {
-            unsigned int bucket = get_digit(src[i], dig);
+            unsigned int bucket = get_digit(src[i], dig, digit_bits, mask);
             dst[offset[bucket]++] = src[i];
         }
 
@@ -235,22 +240,26 @@ static void radix_sort_range(sort_key_t *data,
 void radix_sort_omp(sort_key_t *data, 
                     sort_key_t *scratch, 
                     size_t begin, 
-                    size_t end
+                    size_t end,
+                    int digit_bits
                    ) 
 {
+    int n_buckets = (1 << digit_bits);
+    int mask = n_buckets - 1;
+
     size_t n = end - begin;
     if (n <= 1) return;
 
     // Fall back to serial sort for small datasets to avoid parallel overhead
     if (n < 1024) {
-        radix_sort_range(data, scratch, begin, end);
+        radix_sort_range(data, scratch, begin, end, digit_bits);
         return;
     }
 
     sort_key_t *src = data + begin;
     sort_key_t *dst = scratch + begin;
 
-    int total_digits = (int)(sizeof(sort_key_t) * 8 / RADIX_BITS);
+    int total_digits = (int)(sizeof(sort_key_t) * 8 / digit_bits);
 
     #pragma omp parallel
     {
@@ -258,8 +267,8 @@ void radix_sort_omp(sort_key_t *data,
         int nthreads = omp_get_num_threads();
 
         // Allocate local thread accumulation arrays on stack
-        size_t local_count[NBUCKETS];
-        size_t local_offset[NBUCKETS];
+        size_t local_count[n_buckets];
+        size_t local_offset[n_buckets];
 
         // Shared matrix for thread counts: Gl[thread_id][bucket]
         static size_t **Gl = NULL;
@@ -269,28 +278,28 @@ void radix_sort_omp(sort_key_t *data,
             Gl = (size_t **)malloc(nthreads * sizeof(size_t *));
             for (int t = 0; t < nthreads; t++) {
                 // Ensure alignment to 64-byte cache line (assumptuion on the cache-line dimension)
-                posix_memalign((void **)&Gl[t], 64, NBUCKETS * sizeof(size_t));
+                posix_memalign((void **)&Gl[t], 64, n_buckets * sizeof(size_t));
             }
         }
         
         for (int dig = 0; dig < total_digits; dig++) {
-            memset(local_count, 0, NBUCKETS * sizeof(size_t));
+            memset(local_count, 0, n_buckets * sizeof(size_t));
             // count sort
             #pragma omp for schedule(static)
             for (size_t i = 0; i < n; i++) {
-                unsigned int bucket = get_digit(src[i], dig);
+                unsigned int bucket = get_digit(src[i], dig, digit_bits, mask);
                 local_count[bucket]++;
             }
 
             // Copy thread local counts to shared Gl matrix
-            for (int b = 0; b < NBUCKETS; b++) {
+            for (int b = 0; b < n_buckets; b++) {
                 Gl[tid][b] = local_count[b];
             }
 
             #pragma omp barrier // wait for everyone to synch
 
             // Parallel Prefix Sum (Compute starting write positions per bucket & thread)
-            for (int b = 0; b < NBUCKETS; b++) {
+            for (int b = 0; b < n_buckets; b++) {
                 size_t sum = 0;
                 // Sum all preceding buckets across all threads
                 for (int prev_b = 0; prev_b < b; prev_b++) {
@@ -308,7 +317,7 @@ void radix_sort_omp(sort_key_t *data,
             // Scatter Step into destination array
             #pragma omp for schedule(static)
             for (size_t i = 0; i < n; i++) {
-                unsigned int bucket = get_digit(src[i], dig);
+                unsigned int bucket = get_digit(src[i], dig, digit_bits, mask);
                 dst[local_offset[bucket]++] = src[i]; // increment local_offset[bucket] after the access
             }
 
@@ -342,10 +351,11 @@ void radix_sort_omp(sort_key_t *data,
 void sort_virtual_chunks (sort_key_t    *keys,        // key array split into virtual chunks
                           sort_key_t    *scratch,     // temporary array for merge sort
                           size_t         nkeys,       // total number of keys
-                          unsigned int   nchunks,     // number of virtual chunks
-                          base_sorting sort_algo      // local sorting algorithm
+                          options_t     *options      // various options
                         ) 
 {
+  unsigned int nchunks = (unsigned int)options->nbuckets;
+  base_sorting sort_algo = (base_sorting)options->sorting;
   if (sort_algo == MERGE_SORT) {
     for (unsigned int rank = 0; rank < nchunks; rank++) {
       size_t begin = chunk_begin (nkeys, nchunks, rank);
@@ -355,11 +365,19 @@ void sort_virtual_chunks (sort_key_t    *keys,        // key array split into vi
   }
   if (sort_algo == RADIX_SORT){
     for (unsigned int rank = 0; rank < nchunks; rank++){
+      int digit_bits = (int)options->radix_bits;
       size_t begin = chunk_begin (nkeys, nchunks, rank);
       size_t end = chunk_end (nkeys, nchunks, rank);
-      radix_sort_omp (keys, scratch, begin, end);
+      radix_sort_omp (keys, scratch, begin, end, digit_bits);
     }
   }
+  /*if (sort_algo == QUICK_SORT){
+    for (unsigned int rank = 0; rank < nchunks; rank++){
+      size_t begin = chunk_begin (nkeys, nchunks, rank);
+      size_t end = chunk_end (nkeys, nchunks, rank);
+      quick_sort_omp (keys, scratch, begin, end);
+    }
+  }*/
   // TO IMPLEMENT THE REMAINING OTHERS:
   // otpimized merge sort
   // quick sort

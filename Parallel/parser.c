@@ -27,11 +27,12 @@ print_usage ( char     *program_name   // executable name from argv[0]
            "  --seed VALUE           random seed for generated inputs            (%llu)\n"
            "  --distribution NAME    uniform | skewed | few-unique | sorted | reverse | almost-sorted (%s)\n"
            "  --sorting NAME         merge | opt_merge | quick | radix (%s)\n"
+           "  --radix_bits VALUE     digit size for radix sort (%d)\n"
            "  --print-limit VALUE    print the first VALUE sorted keys           (%llu)\n"
            "  --help                 show this help message\n\n",
            program_name, (unsigned long long) DEFAULT_NKEYS, DEFAULT_NBUCKETS,
            (unsigned long long) DEFAULT_OVERSAMPLE, (unsigned long long) DEFAULT_SEED,
-           DEFAULT_DISTRIBUTION, DEFAULT_SORT, (unsigned long long) DEFAULT_PRINT_LIMIT);
+           DEFAULT_DISTRIBUTION, DEFAULT_SORT, DEFAULT_RADIX_BITS, (unsigned long long) DEFAULT_PRINT_LIMIT);
 }
 
 /*
@@ -49,6 +50,7 @@ set_default_options ( options_t   *options   // output options structure
   options->distribution_name = DEFAULT_DISTRIBUTION;
   options->sorting           = MERGE_SORT;
   options->sorting_name      = DEFAULT_SORT;
+  options->radix_bits        = DEFAULT_RADIX_BITS;
   options->print_limit       = (size_t) DEFAULT_PRINT_LIMIT;
 }
 
@@ -160,6 +162,28 @@ parse_u64_option ( int        argc,    // number of command-line tokens
 }
 
 /*
+  Parse an unsigned integer option into uint64_t.
+*/
+static int
+parse_int_option ( int        argc,    // number of command-line tokens
+                   char     **argv,    // command-line token vector
+                   int       *i,       // index of the option being parsed
+                   int       *value    // parsed output value
+		   ) {
+  char *endptr;
+  if (*i + 1 >= argc) { fprintf (stderr, "Missing value after %s\n", argv[*i]); return -1; }
+  errno = 0; endptr = NULL;
+  unsigned long long parsed = strtoull (argv[*i + 1], &endptr, 10);
+  if (errno != 0 || endptr == argv[*i + 1] || *endptr != '\0') {
+    fprintf (stderr, "Invalid integer for %s: %s\n", argv[*i], argv[*i + 1]);
+    return -1;
+  }
+  *value = (int) parsed;
+  *i += 1;
+  return 0;
+}
+
+/*
   Parse all command-line options.
   Unknown flags are treated as errors so that mistakes in job scripts are caught
 */
@@ -186,6 +210,7 @@ parse_options ( int          argc,      // number of command-line tokens
       if (parse_sort_name (argv[i + 1], &options->sorting) != 0) return -1;
       options->sorting_name = argv[i + 1]; i++;
     }
+    else if (strcmp (argv[i], "--radix_bits") == 0) { if (parse_int_option (argc, argv, &i, &options->radix_bits) != 0) return -1; }
     else if (strcmp (argv[i], "--print-limit") == 0) { if (parse_size_option (argc, argv, &i, &options->print_limit) != 0) return -1; }
     else { fprintf (stderr, "Unknown option: %s\n", argv[i]); print_usage (argv[0]); return -1; }
   }
@@ -203,6 +228,7 @@ validate_options ( options_t   *options   // parsed options to validate
 {
   if (options->nkeys == 0 || options->nbuckets == 0 || options->oversample == 0) return -1;
   if ((size_t) options->nbuckets > options->nkeys) return -1;
+  if ((size_t) options->radix_bits > N_BITS) return -1; // maximum number of digits = 
   if (options->nbuckets > 1) {
     if (options->oversample > SIZE_MAX / (size_t) (options->nbuckets - 1)) return -1;
     size_t samples_per_chunk = options->oversample * (size_t) (options->nbuckets - 1);

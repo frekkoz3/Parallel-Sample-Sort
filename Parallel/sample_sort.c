@@ -310,7 +310,7 @@ void sample_sort (       sort_key_t    *keys,          // input keys, modified b
   // sort your local chunk
 
   t0 = wall_seconds ();
-  sort_virtual_chunks (keys, scratch, nkeys, options->nbuckets, options->sorting);
+  sort_virtual_chunks (keys, scratch, nkeys, options);
   t1 = wall_seconds ();
   timing->local_sort = t1 - t0;
 

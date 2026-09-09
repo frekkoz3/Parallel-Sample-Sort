@@ -1,8 +1,8 @@
+#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
-#include "utils.h"
 #include "parser.h"
 #include "sample_sort.h"
 
@@ -14,6 +14,7 @@
 
 static void print_summary (options_t *options, timing_t *timing, signature_t before_sig, signature_t after_sig, int sorted_ok, int signature_ok, size_t bad_index) {
   printf ("nkeys                    %zu\n", options->nkeys);
+  printf ("n_bits                   %d\n", N_BITS);
   printf ("virtual_ranks            %u\n", options->nbuckets);
   printf ("oversample               %zu\n", options->oversample);
   printf ("distribution             %s\n", options->distribution_name);
