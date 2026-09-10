@@ -192,13 +192,235 @@ compute_bucket_starts ( size_t        *bounds,          // source/destination bo
   This is the place to possible compare different merging strategies
 */
 static void
-merge_destination_bucket ( sort_key_t    *keys,          // source sorted chunks
-                           size_t        *bounds,        // source/destination boundaries
-                           unsigned int   nchunks,       // number of incoming streams
-                           unsigned int   destination,   // destination bucket to merge
-                           sort_key_t    *output,        // full output array
-                           size_t         out_begin      // first output index for this bucket
+basic_iterative_k_way_merge_buckets ( sort_key_t    *keys,          // source sorted chunks
+                                      size_t        *bounds,        // source/destination boundaries
+                                      unsigned int   nchunks,       // number of incoming streams
+                                      unsigned int   destination,   // destination bucket to merge
+                                      sort_key_t    *output,        // full output array
+                                      size_t         out_begin     // first output index for this bucket
 			 )
+{
+  size_t      *current;
+  size_t      *end;
+  unsigned int source;
+  unsigned int best_source;
+  int          have_best;
+  sort_key_t   best_key;
+  size_t       row;
+  size_t       out;
+  size_t       out_end;
+
+  current = malloc_array ((size_t) nchunks, sizeof (size_t));
+  end = malloc_array ((size_t) nchunks, sizeof (size_t));
+
+  out = out_begin;
+  out_end = out_begin;
+
+  for (source = 0; source < nchunks; source++)
+    {
+      row = (size_t) source * ((size_t) nchunks + 1);
+      current[source] = bounds[row + (size_t) destination];
+      end[source] = bounds[row + (size_t) destination + 1];
+      out_end += end[source] - current[source];
+    }
+
+  while (out < out_end)
+    {
+      have_best = 0;
+      best_source = 0;
+      best_key = 0;
+
+      for (source = 0; source < nchunks; source++)
+        {
+          if (current[source] < end[source])
+            {
+              if (!have_best || keys[current[source]] < best_key)
+                {
+                  have_best = 1;
+                  best_source = source;
+                  best_key = keys[current[source]];
+                }
+            }
+        }
+
+      // have_best must be true while out < out_end.  If it is not, the bucket
+      // boundary arithmetic above is inconsistent.
+      if (!have_best)
+        {
+          fprintf (stderr, "Internal error during k-way merge\n");
+          free (current);
+          free (end);
+          exit (EXIT_FAILURE);
+        }
+
+      output[out++] = best_key;
+      current[best_source] += 1;
+    }
+
+  free (current);
+  free (end);
+}
+
+/*
+  Binary iterative K-way merge.
+  It is the same of the basic kwm, but instead of merging the first array with the second, 
+  the resulting array with the third and so on, we are gonna merge following a binary idea,
+  first with second, third with fourth ... and so on 
+*/
+static void
+binary_iterative_k_way_merge_buckets (  sort_key_t    *keys,          // source sorted chunks
+                                        size_t        *bounds,        // source/destination boundaries
+                                        unsigned int   nchunks,       // number of incoming streams
+                                        unsigned int   destination,   // destination bucket to merge
+                                        sort_key_t    *output,        // full output array
+                                        size_t         out_begin      // first output index for this bucket
+                                      )
+{
+  size_t      *current;
+  size_t      *end;
+  unsigned int source;
+  unsigned int best_source;
+  int          have_best;
+  sort_key_t   best_key;
+  size_t       row;
+  size_t       out;
+  size_t       out_end;
+
+  current = malloc_array ((size_t) nchunks, sizeof (size_t));
+  end = malloc_array ((size_t) nchunks, sizeof (size_t));
+
+  out = out_begin;
+  out_end = out_begin;
+
+  for (source = 0; source < nchunks; source++)
+    {
+      row = (size_t) source * ((size_t) nchunks + 1);
+      current[source] = bounds[row + (size_t) destination];
+      end[source] = bounds[row + (size_t) destination + 1];
+      out_end += end[source] - current[source];
+    }
+
+  while (out < out_end)
+    {
+      have_best = 0;
+      best_source = 0;
+      best_key = 0;
+
+      for (source = 0; source < nchunks; source++)
+        {
+          if (current[source] < end[source])
+            {
+              if (!have_best || keys[current[source]] < best_key)
+                {
+                  have_best = 1;
+                  best_source = source;
+                  best_key = keys[current[source]];
+                }
+            }
+        }
+
+      // have_best must be true while out < out_end.  If it is not, the bucket
+      // boundary arithmetic above is inconsistent.
+      if (!have_best)
+        {
+          fprintf (stderr, "Internal error during k-way merge\n");
+          free (current);
+          free (end);
+          exit (EXIT_FAILURE);
+        }
+
+      output[out++] = best_key;
+      current[best_source] += 1;
+    }
+
+  free (current);
+  free (end);
+}
+
+/*
+  Heap direct K-way merge.
+*/
+static void
+heap_direct_k_way_merge_buckets ( sort_key_t    *keys,          // source sorted chunks
+                                  size_t        *bounds,        // source/destination boundaries
+                                  unsigned int   nchunks,       // number of incoming streams
+                                  unsigned int   destination,   // destination bucket to merge
+                                  sort_key_t    *output,        // full output array
+                                  size_t         out_begin     // first output index for this bucket
+                                )
+{
+    size_t      *current;
+  size_t      *end;
+  unsigned int source;
+  unsigned int best_source;
+  int          have_best;
+  sort_key_t   best_key;
+  size_t       row;
+  size_t       out;
+  size_t       out_end;
+
+  current = malloc_array ((size_t) nchunks, sizeof (size_t));
+  end = malloc_array ((size_t) nchunks, sizeof (size_t));
+
+  out = out_begin;
+  out_end = out_begin;
+
+  for (source = 0; source < nchunks; source++)
+    {
+      row = (size_t) source * ((size_t) nchunks + 1);
+      current[source] = bounds[row + (size_t) destination];
+      end[source] = bounds[row + (size_t) destination + 1];
+      out_end += end[source] - current[source];
+    }
+
+  while (out < out_end)
+    {
+      have_best = 0;
+      best_source = 0;
+      best_key = 0;
+
+      for (source = 0; source < nchunks; source++)
+        {
+          if (current[source] < end[source])
+            {
+              if (!have_best || keys[current[source]] < best_key)
+                {
+                  have_best = 1;
+                  best_source = source;
+                  best_key = keys[current[source]];
+                }
+            }
+        }
+
+      // have_best must be true while out < out_end.  If it is not, the bucket
+      // boundary arithmetic above is inconsistent.
+      if (!have_best)
+        {
+          fprintf (stderr, "Internal error during k-way merge\n");
+          free (current);
+          free (end);
+          exit (EXIT_FAILURE);
+        }
+
+      output[out++] = best_key;
+      current[best_source] += 1;
+    }
+
+  free (current);
+  free (end);
+}
+
+/*
+  Tournament tree direct K-way merge.
+*/
+static void
+tournament_tree_direct_k_way_merge_buckets (  sort_key_t    *keys,          // source sorted chunks
+                                              size_t        *bounds,        // source/destination boundaries
+                                              unsigned int   nchunks,       // number of incoming streams
+                                              unsigned int   destination,   // destination bucket to merge
+                                              sort_key_t    *output,        // full output array
+                                              size_t         out_begin     // first output index for this bucket
+			                                      )
 {
   size_t      *current;
   size_t      *end;
@@ -267,18 +489,34 @@ merge_destination_bucket ( sort_key_t    *keys,          // source sorted chunks
   bucket b are less than or equal to all keys in bucket b + 1 by construction.
 */
 static void
-merge_all_buckets ( sort_key_t    *keys,            // locally sorted source chunks
-                    size_t        *bounds,          // source/destination boundaries
-                    size_t        *bucket_starts,   // output prefix sum by destination bucket
-                    unsigned int   nchunks,         // number of virtual chunks and buckets
-                    sort_key_t    *output           // globally sorted output array
+merge_all_buckets_omp ( sort_key_t    *keys,                // locally sorted source chunks
+                    size_t            *bounds,              // source/destination boundaries
+                    size_t            *bucket_starts,       // output prefix sum by destination bucket
+                    unsigned int       nchunks,             // number of virtual chunks and buckets
+                    sort_key_t        *output,              // globally sorted output array
+                    merging_strategy  merging_strat         // k-way merging strategy
 		  )
 {
   unsigned int destination;
-
-  for (destination = 0; destination < nchunks; destination++)
-    merge_destination_bucket (keys, bounds, nchunks, destination, output,
+  #pragma omp parallel for schedule(static)
+  for (destination = 0; destination < nchunks; destination++){
+    if(merging_strat == BINARY_ITERATIVE_KWM){
+      binary_iterative_k_way_merge_buckets (keys, bounds, nchunks, destination, output,
                               bucket_starts[destination]);
+    }
+    if(merging_strat == BASIC_ITERATIVE_KWM){
+      basic_iterative_k_way_merge_buckets (keys, bounds, nchunks, destination, output,
+                              bucket_starts[destination]);
+    }
+    if(merging_strat == HEAP_DIRECT_KWM){
+      heap_direct_k_way_merge_buckets (keys, bounds, nchunks, destination, output,
+                              bucket_starts[destination]);
+    }
+    if(merging_strat == TORUNAMENT_TREE_DIRECT_KWM){
+      tournament_tree_direct_k_way_merge_buckets (keys, bounds, nchunks, destination, output,
+                              bucket_starts[destination]);
+    }
+  }
 }
 
 /*
@@ -286,7 +524,7 @@ merge_all_buckets ( sort_key_t    *keys,            // locally sorted source chu
   The input array is modified during the local sort phase;
   the final globally sorted sequence is written to output.
 */
-void sample_sort (       sort_key_t    *keys,          // input keys, modified by local sorts
+void sample_sort (  sort_key_t    *keys,          // input keys, modified by local sorts
                     sort_key_t    *output,        // globally sorted output keys
                     size_t         nkeys,         // number of keys
                     options_t     *options,       // runtime options
@@ -295,7 +533,6 @@ void sample_sort (       sort_key_t    *keys,          // input keys, modified b
 {
   sort_key_t *scratch;
   sort_key_t *samples;
-  sort_key_t *sample_scratch;
   sort_key_t *pivots;
   size_t     *bounds;
   size_t     *bucket_starts;
@@ -337,13 +574,15 @@ void sample_sort (       sort_key_t    *keys,          // input keys, modified b
   
   base_sorting sort_algo = (base_sorting)options->sorting;
   if (sort_algo == MERGE_SORT) {
-    sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
+    sort_key_t *sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
     merge_sort_omp (samples, sample_scratch, 0, nsamples);
+    free (sample_scratch);
   }
   if (sort_algo == RADIX_SORT){
-    sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
+    sort_key_t *sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
     int digit_bits = (int)options->radix_bits;
-    radix_sort_omp (samples, sampl_scratch, 0, nsample, digit_bits);
+    radix_sort_omp (samples, sample_scratch, 0, nsamples, digit_bits);
+    free (sample_scratch);
   }
   if (sort_algo == QUICK_SORT){
     quick_sort_omp (samples, 0, nsamples);
@@ -367,14 +606,13 @@ void sample_sort (       sort_key_t    *keys,          // input keys, modified b
   // merge (here of course we lack exchanging data.. )
 
   t0 = wall_seconds ();
-  merge_all_buckets (keys, bounds, bucket_starts, options->nbuckets, output);
+  merge_all_buckets_omp (keys, bounds, bucket_starts, options->nbuckets, output, options->merging);
   t1 = wall_seconds ();
   timing->merging = t1 - t0;
 
   free (bucket_starts);
   free (bounds);
   free (pivots);
-  free (sample_scratch);
   free (samples);
   free (scratch);
 }
