@@ -28,11 +28,12 @@ print_usage ( char     *program_name   // executable name from argv[0]
            "  --distribution NAME    uniform | skewed | few-unique | sorted | reverse | almost-sorted (%s)\n"
            "  --sorting NAME         merge | quick | radix (%s)\n"
            "  --radix_bits VALUE     digit size for radix sort (%d)\n"
+           "  --merging_strat NAME   final merging strategy basic | bin | heap | tournament (%s)\n"
            "  --print-limit VALUE    print the first VALUE sorted keys           (%llu)\n"
            "  --help                 show this help message\n\n",
            program_name, (unsigned long long) DEFAULT_NKEYS, DEFAULT_NBUCKETS,
            (unsigned long long) DEFAULT_OVERSAMPLE, (unsigned long long) DEFAULT_SEED,
-           DEFAULT_DISTRIBUTION, DEFAULT_SORT, DEFAULT_RADIX_BITS, (unsigned long long) DEFAULT_PRINT_LIMIT);
+           DEFAULT_DISTRIBUTION, DEFAULT_SORT, DEFAULT_RADIX_BITS, DEFAULT_MERGING_STRAT ,(unsigned long long) DEFAULT_PRINT_LIMIT);
 }
 
 /*
@@ -51,6 +52,8 @@ set_default_options ( options_t   *options   // output options structure
   options->sorting           = MERGE_SORT;
   options->sorting_name      = DEFAULT_SORT;
   options->radix_bits        = DEFAULT_RADIX_BITS;
+  options->merging           = BINARY_ITERATIVE_KWM;
+  options->merging_name      = DEFAULT_MERGING_STRAT;
   options->print_limit       = (size_t) DEFAULT_PRINT_LIMIT;
 }
 
@@ -85,6 +88,25 @@ static int parse_sort_name (char           *name,          // user-provided dist
   if (strcmp (name, "merge") == 0) { *sorting = MERGE_SORT; return 0; }
   if (strcmp (name, "quick") == 0) { *sorting = QUICK_SORT; return 0; }
   if (strcmp (name, "radix") == 0) { *sorting = RADIX_SORT; return 0; }
+  fprintf (stderr, "Unknown distribution '%s'\n", name);
+  return -1;
+}
+
+/*
+  Convert a distribution name into the internal enum.  
+  Different types of data distribution are useful for a load-imbalance discussion:
+  uniform is the clean case, skewed and few-unique stress the pivot selection,
+  and sorted/reverse are edge cases for the local sort.
+*/
+static int
+parse_merging_name (char             *name,          // user-provided distribution name
+                   merging_strategy *merging       // parsed distribution enum
+			 )
+{
+  if (strcmp (name, "basic") == 0) { *merging = BASIC_ITERATIVE_KWM; return 0; }
+  if (strcmp (name, "bin") == 0) { *merging = BINARY_ITERATIVE_KWM; return 0; }
+  if (strcmp (name, "heap") == 0) { *merging = HEAP_DIRECT_KWM; return 0; }
+  if (strcmp (name, "tournament") == 0) { *merging = TORUNAMENT_TREE_DIRECT_KWM; return 0; }
   fprintf (stderr, "Unknown distribution '%s'\n", name);
   return -1;
 }
@@ -210,6 +232,11 @@ parse_options ( int          argc,      // number of command-line tokens
       options->sorting_name = argv[i + 1]; i++;
     }
     else if (strcmp (argv[i], "--radix_bits") == 0) { if (parse_int_option (argc, argv, &i, &options->radix_bits) != 0) return -1; }
+    else if (strcmp (argv[i], "--merging_strat") == 0) {
+      if (i + 1 >= argc) return -1;
+      if (parse_merging_name (argv[i + 1], &options->merging) != 0) return -1;
+      options->merging_name = argv[i + 1]; i++;
+    }
     else if (strcmp (argv[i], "--print-limit") == 0) { if (parse_size_option (argc, argv, &i, &options->print_limit) != 0) return -1; }
     else { fprintf (stderr, "Unknown option: %s\n", argv[i]); print_usage (argv[0]); return -1; }
   }

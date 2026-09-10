@@ -13,6 +13,7 @@
 #define DEFAULT_SEED           (1ULL)
 #define DEFAULT_DISTRIBUTION   "uniform"
 #define DEFAULT_SORT           "merge"
+#define DEFAULT_MERGING_STRAT  "bin"
 #define DEFAULT_RADIX_BITS     (8u)
 #define DEFAULT_PRINT_LIMIT    (0ULL)
 
@@ -45,6 +46,13 @@ typedef enum {
   QUICK_SORT
 } base_sorting;
 
+typedef enum {
+  BASIC_ITERATIVE_KWM,
+  BINARY_ITERATIVE_KWM,
+  HEAP_DIRECT_KWM,
+  TORUNAMENT_TREE_DIRECT_KWM
+} merging_strategy;
+
 /*
   Runtime options. Guess what?  nbuckets plays the role of the
   number of MPI processes in the future distributed implementation, but here it
@@ -60,6 +68,8 @@ typedef struct {
   base_sorting      sorting;
   char             *sorting_name;
   int               radix_bits;
+  merging_strategy  merging;
+  char             *merging_name;
   size_t            print_limit;
 } options_t;
 
