@@ -263,9 +263,13 @@ basic_iterative_k_way_merge_buckets ( sort_key_t    *keys,          // source so
 
 /*
   Binary iterative K-way merge.
-  It is the same of the basic kwm, but instead of merging the first array with the second, 
-  the resulting array with the third and so on, we are gonna merge following a binary idea,
-  first with second, third with fourth ... and so on 
+    Merge the incoming sorted streams in a binary/tree fashion:
+    round 0:  (0,1), (2,3), (4,5), ...
+    round 1:  (0..1,2..3), (4..5,6..7), ...
+    round 2:  ...
+
+  The implementation uses a ping-pong strategy based on
+  the bucket and a temporary buffer between rounds
 */
 static void
 binary_iterative_k_way_merge_buckets (  sort_key_t    *keys,          // source sorted chunks
@@ -276,65 +280,208 @@ binary_iterative_k_way_merge_buckets (  sort_key_t    *keys,          // source 
                                         size_t         out_begin      // first output index for this bucket
                                       )
 {
-  size_t      *current;
-  size_t      *end;
+  size_t *begin;
+  size_t *end;
+  size_t *new_begin;
+  size_t *new_end;
+
+  sort_key_t *src;
+  sort_key_t *dst;
+  sort_key_t *tmp;
+
   unsigned int source;
-  unsigned int best_source;
-  int          have_best;
-  sort_key_t   best_key;
-  size_t       row;
-  size_t       out;
-  size_t       out_end;
+  unsigned int nruns;
+  unsigned int new_nruns;
+  unsigned int i;
 
-  current = malloc_array ((size_t) nchunks, sizeof (size_t));
-  end = malloc_array ((size_t) nchunks, sizeof (size_t));
+  size_t total;
+  size_t pos;
 
-  out = out_begin;
-  out_end = out_begin;
+  if (nchunks == 0)
+    return;
+
+  /*
+    Find the total size of the destination bucket.
+  */
+  total = 0;
 
   for (source = 0; source < nchunks; source++)
     {
+      size_t row;
+
       row = (size_t) source * ((size_t) nchunks + 1);
-      current[source] = bounds[row + (size_t) destination];
-      end[source] = bounds[row + (size_t) destination + 1];
-      out_end += end[source] - current[source];
+
+      total += bounds[row + (size_t) destination + 1]
+             - bounds[row + (size_t) destination];
     }
 
-  while (out < out_end)
+  if (total == 0)
+    return;
+
+  /*
+    Temporary storage for the ping-pong merge.
+  */
+  tmp = malloc_array (total, sizeof (sort_key_t));
+
+  begin = malloc_array ((size_t) nchunks, sizeof (size_t));
+  end = malloc_array ((size_t) nchunks, sizeof (size_t));
+  new_begin = malloc_array ((size_t) nchunks, sizeof (size_t));
+  new_end = malloc_array ((size_t) nchunks, sizeof (size_t));
+
+  /*
+    First copy all source runs into one contiguous temporary array.
+    After this point all indexes are relative to this bucket.
+  */
+  pos = 0;
+
+  for (source = 0; source < nchunks; source++)
     {
-      have_best = 0;
-      best_source = 0;
-      best_key = 0;
+      size_t row;
+      size_t source_begin;
+      size_t source_end;
+      size_t j;
 
-      for (source = 0; source < nchunks; source++)
-        {
-          if (current[source] < end[source])
-            {
-              if (!have_best || keys[current[source]] < best_key)
-                {
-                  have_best = 1;
-                  best_source = source;
-                  best_key = keys[current[source]];
-                }
-            }
-        }
+      row = (size_t) source * ((size_t) nchunks + 1);
 
-      // have_best must be true while out < out_end.  If it is not, the bucket
-      // boundary arithmetic above is inconsistent.
-      if (!have_best)
-        {
-          fprintf (stderr, "Internal error during k-way merge\n");
-          free (current);
-          free (end);
-          exit (EXIT_FAILURE);
-        }
+      source_begin = bounds[row + (size_t) destination];
+      source_end = bounds[row + (size_t) destination + 1];
 
-      output[out++] = best_key;
-      current[best_source] += 1;
+      begin[source] = pos;
+      end[source] = pos + source_end - source_begin;
+
+      for (j = source_begin; j < source_end; j++)
+        tmp[pos++] = keys[j];
     }
 
-  free (current);
+  /*
+    At the beginning, all runs are in tmp.
+  */
+  src = tmp;
+  dst = output + out_begin;
+
+  nruns = nchunks;
+
+  while (nruns > 1)
+    {
+      new_nruns = 0;
+
+      for (i = 0; i < nruns; i += 2)
+        {
+          size_t left;
+          size_t left_end;
+          size_t right;
+          size_t right_end;
+          size_t out;
+
+          /*
+            First run of the pair.
+          */
+          left = begin[i];
+          left_end = end[i];
+
+          /*
+            Odd run at the end: just copy it.
+          */
+          if (i + 1 >= nruns)
+            {
+              out = (new_nruns == 0)
+                    ? 0
+                    : new_end[new_nruns - 1];
+
+              new_begin[new_nruns] = out;
+
+              while (left < left_end)
+                dst[out++] = src[left++];
+
+              new_end[new_nruns] = out;
+              new_nruns++;
+
+              continue;
+            }
+
+          /*
+            Second run of the pair.
+          */
+          right = begin[i + 1];
+          right_end = end[i + 1];
+
+          out = (new_nruns == 0)
+                ? 0
+                : new_end[new_nruns - 1];
+
+          new_begin[new_nruns] = out;
+
+          /*
+            Two-way merge.
+            
+            On equality choose the left run, matching the behavior
+            of basic_iterative_k_way_merge_buckets(), which scans
+            sources from low to high.
+          */
+          while (left < left_end && right < right_end)
+            {
+              if (!(src[right] < src[left]))
+                dst[out++] = src[left++];
+              else
+                dst[out++] = src[right++];
+            }
+
+          while (left < left_end)
+            dst[out++] = src[left++];
+
+          while (right < right_end)
+            dst[out++] = src[right++];
+
+          new_end[new_nruns] = out;
+          new_nruns++;
+        }
+
+      /*
+        Swap run-boundary arrays.
+      */
+      {
+        size_t *swap;
+
+        swap = begin;
+        begin = new_begin;
+        new_begin = swap;
+
+        swap = end;
+        end = new_end;
+        new_end = swap;
+      }
+
+      nruns = new_nruns;
+
+      /*
+        Swap source and destination buffers.
+      */
+      {
+        sort_key_t *swap;
+
+        swap = src;
+        src = dst;
+        dst = swap;
+      }
+    }
+
+  /*
+    If the final result ended up in tmp, copy it to output.
+    If it already ended up in output, nothing is needed.
+  */
+  if (src != output + out_begin)
+    {
+      size_t j;
+
+      for (j = 0; j < total; j++)
+        output[out_begin + j] = src[j];
+    }
+
+  free (begin);
   free (end);
+  free (new_begin);
+  free (new_end);
+  free (tmp);
 }
 
 /*
