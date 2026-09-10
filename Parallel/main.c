@@ -19,6 +19,7 @@ static void print_summary (options_t *options, timing_t *timing, signature_t bef
   printf ("oversample               %zu\n", options->oversample);
   printf ("distribution             %s\n", options->distribution_name);
   printf ("local sorting algorithm  %s\n", options->sorting_name);
+  printf ("merging strategy         %s\n", options->merging_name);
   printf ("seed                     %" PRIu64 "\n", options->seed);
   printf ("sorted_ok                %s\n", sorted_ok ? "yes" : "no");
   printf ("multiset_signature_ok    %s\n", signature_ok ? "yes" : "no");
