@@ -1,0 +1,27 @@
+#!/bin/bash
+
+#SBATCH --partition=GENOA
+#SBATCH --nodes=1
+#SBATCH --account=dssc
+#SBATCH --ntasks-per-node=16
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=10G
+#SBATCH --output=o.out
+#SBATCH --time=01:00:00
+
+$SLURM_JOB_ID
+
+echo "========================"
+echo "running on:       $(hostname)"
+echo "job_id            $SLURM_JOB_ID"
+echo "directory:        $(pwd)"
+echo "date:             $(date)"
+echo "========================"
+
+make
+make run
+
+echo "========================"
+echo "finished work"
+echo "finish date:      $(date)"
+echo "========================"

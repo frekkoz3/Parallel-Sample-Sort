@@ -22,7 +22,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(BITSIZE) -c $< -o $@
 
 run: $(TARGET)
-	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 1000000 --nbuckets 8 --distribution uniform
+	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000000 --nbuckets 16 --distribution uniform --merging_strat basic --sorting radix
 
 check: $(TARGET)
 	@echo "Running test suite with OMP_NUM_THREADS=$(THREADS)..."
