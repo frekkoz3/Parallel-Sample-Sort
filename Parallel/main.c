@@ -13,9 +13,10 @@
 */ 
 
 static void print_summary (options_t *options, timing_t *timing, signature_t before_sig, signature_t after_sig, int sorted_ok, int signature_ok, size_t bad_index) {
-  printf ("nkeys                    %zu\n", options->nkeys);
+  printf ("n_keys                   %zu\n", options->nkeys);
   printf ("n_bits                   %d\n", N_BITS);
-  printf ("virtual_ranks            %u\n", options->nbuckets);
+  printf ("n_ranks,                 %u\n", options->nbuckets);
+  printf ("n_threads,               %u\n", options->nthreads);
   printf ("oversample               %zu\n", options->oversample);
   printf ("distribution             %s\n", options->distribution_name);
   printf ("local sorting algorithm  %s\n", options->sorting_name);
@@ -47,7 +48,7 @@ static void save_results(char *where_save, options_t *options, timing_t *timing,
   }
   rewind(file);
 
-  char *header = "n_key,n_bits,n_ranks,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds\n";
+  char *header = "n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds\n";
   int len = strlen(header);
   // checking for header existence
   char buffer[len + 10]; // a little extra char for possible special characters
@@ -67,6 +68,7 @@ static void save_results(char *where_save, options_t *options, timing_t *timing,
   fprintf (file, "%zu,", options->nkeys);
   fprintf (file, "%d,", N_BITS);
   fprintf (file, "%u,", options->nbuckets);
+  fprintf (file, "%u,", options->nthreads);
   fprintf (file, "%zu,", options->oversample);
   fprintf (file, "%s,", options->distribution_name);
   fprintf (file, "%s,", options->sorting_name);

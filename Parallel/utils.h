@@ -61,6 +61,7 @@ typedef enum {
 typedef struct {
   size_t            nkeys;
   unsigned int      nbuckets;
+  unsigned int      nthreads;
   size_t            oversample;
   uint64_t          seed;
   distribution_t    distribution;

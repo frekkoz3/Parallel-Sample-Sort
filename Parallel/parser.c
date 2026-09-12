@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <omp.h>
 
 /* 
    : ------------------------------------------------------ :
@@ -45,6 +46,7 @@ set_default_options ( options_t   *options   // output options structure
 {
   options->nkeys             = (size_t) DEFAULT_NKEYS;
   options->nbuckets          = DEFAULT_NBUCKETS;
+  options->nthreads          = omp_get_max_threads();
   options->oversample        = (size_t) DEFAULT_OVERSAMPLE;
   options->seed              = DEFAULT_SEED;
   options->distribution      = DISTRIBUTION_UNIFORM;
