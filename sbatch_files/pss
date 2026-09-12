@@ -18,8 +18,9 @@ echo "directory:        $(pwd)"
 echo "date:             $(date)"
 echo "========================"
 
+make clean
 make
-make run
+make check
 
 echo "========================"
 echo "finished work"

@@ -1,3 +1,13 @@
 
 n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
 100000000,64,16,16,1,uniform,radix,basic,1,yes,yes,0.372546517,0.400216011,0.000026703,0.000272762,0.291171040,0.096336894,1.438396776
+n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
+100000000,64,16,64,1,uniform,radix,bin,1,yes,yes,0.353093293,0.531284685,0.000026770,0.000194721,0.189712624,0.025469262,1.390198763
+n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
+100000000,64,16,64,4,skewed,radix,bin,1,yes,yes,0.494031310,0.516644826,0.000048600,0.000214091,0.172834920,0.025177850,1.495239616
+n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
+100000000,64,16,64,1,few-unique,radix,bin,1,yes,yes,0.331664631,0.543383670,0.000022370,0.000218360,0.169027342,0.025593552,1.356835445
+n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
+100000000,64,16,64,1,reverse,radix,bin,1,yes,yes,0.284519685,0.522148317,0.000024230,0.000016290,0.163755071,0.025162001,1.277907765
+n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
+100000000,64,16,64,1,almost-sorted,radix,bin,1,yes,yes,0.280284547,0.509581761,0.000024440,0.000135890,0.169690094,0.025414411,1.269447779

@@ -9,7 +9,7 @@ SRCS    = main.c parser.c utils.c local_sort.c sample_sort.c
 OBJS    = $(SRCS:.c=.o)
 
 # Default number of threads for execution targets
-THREADS ?= 16
+THREADS ?= 64
 
 .PHONY: all clean run check
 
