@@ -37,6 +37,53 @@ static void print_summary (options_t *options, timing_t *timing, signature_t bef
   printf ("time_total_seconds       %.9f\n", timing->total);
 }
 
+// utility to save results
+static void save_results(char *where_save, options_t *options, timing_t *timing, int sorted_ok, int signature_ok){
+  FILE *file = fopen(where_save, "a+");
+   if (file == NULL) {
+        perror("fopen");
+  }
+  rewind(file);
+
+  char *header = "n_key,n_bits,n_ranks,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds\n";
+  
+  // checking for header existence
+  char buffer[1024];
+
+  rewind(file);
+
+  int has_header = 0;
+
+  if (fgets(buffer, sizeof(buffer), file) != NULL) {
+      has_header = strcmp(buffer, header) == 0;
+  }
+
+  if (!has_header) {
+      fputs(header, file);
+  }
+
+  fprintf (file, "%zu,", options->nkeys);
+  fprintf (file, "%d,", N_BITS);
+  fprintf (file, "%u,", options->nbuckets);
+  fprintf (file, "%zu,", options->oversample);
+  fprintf (file, "%s,", options->distribution_name);
+  fprintf (file, "%s,", options->sorting_name);
+  fprintf (file, "%s,", options->merging_name);
+  fprintf (file, "%" PRIu64 ",", options->seed);
+  fprintf (file, "%s,", sorted_ok ? "yes" : "no");
+  fprintf (file, "%s,", signature_ok ? "yes" : "no");
+  fprintf (file, "%.9f,", timing->generation);
+  fprintf (file, "%.9f,", timing->local_sort);
+  fprintf (file, "%.9f,", timing->sampling);
+  fprintf (file, "%.9f,", timing->partitioning);
+  fprintf (file, "%.9f,", timing->merging);
+  fprintf (file, "%.9f,", timing->sort_verification);
+  fprintf (file, "%.9f\n", timing->total);
+
+  fflush(file);
+  fclose(file);
+}
+
 int main (int argc, char **argv) {
   options_t options;
   timing_t timing;
@@ -77,6 +124,8 @@ int main (int argc, char **argv) {
 
   print_summary (&options, &timing, before_sig, after_sig, sorted_ok, signature_ok, bad_index);
   print_key_prefix (output, options.nkeys, options.print_limit);
+
+  save_results("./results/results.csv", &options, &timing, sorted_ok, signature_ok);
 
   free (output);
   free (keys);

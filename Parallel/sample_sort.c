@@ -297,7 +297,7 @@ binary_iterative_k_way_merge_buckets (  sort_key_t    *keys,          // source 
   size_t total;
   size_t pos;
 
-  if (nchunks == 0)
+  if (nchunks == 0) // just in case
     return;
 
   /*
