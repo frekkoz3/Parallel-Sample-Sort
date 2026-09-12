@@ -38,7 +38,9 @@ static void print_summary (options_t *options, timing_t *timing, signature_t bef
 }
 
 // utility to save results
+// the results will be later used on python side for analysis and visualization purposes
 static void save_results(char *where_save, options_t *options, timing_t *timing, int sorted_ok, int signature_ok){
+
   FILE *file = fopen(where_save, "a+");
    if (file == NULL) {
         perror("fopen");
@@ -46,9 +48,9 @@ static void save_results(char *where_save, options_t *options, timing_t *timing,
   rewind(file);
 
   char *header = "n_key,n_bits,n_ranks,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds\n";
-  
+  int len = strlen(header);
   // checking for header existence
-  char buffer[1024];
+  char buffer[len + 10]; // a little extra char for possible special characters
 
   rewind(file);
 

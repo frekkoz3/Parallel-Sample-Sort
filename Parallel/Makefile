@@ -26,11 +26,11 @@ run: $(TARGET)
 
 check: $(TARGET)
 	@echo "Running test suite with OMP_NUM_THREADS=$(THREADS)..."
-	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000 --nbuckets 8 --distribution uniform
-	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000 --nbuckets 8 --distribution skewed --oversample 4
-	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000 --nbuckets 8 --distribution few-unique
-	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000 --nbuckets 8 --distribution reverse
-	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000 --nbuckets 8 --distribution almost-sorted
+	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000000 --nbuckets 16 --distribution uniform --sorting radix
+	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000000 --nbuckets 16 --distribution skewed --oversample 4 --sorting radix
+	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000000 --nbuckets 16 --distribution few-unique --sorting radix
+	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000000 --nbuckets 16 --distribution reverse --sorting radix
+	OMP_NUM_THREADS=$(THREADS) ./$(TARGET) --n 100000000 --nbuckets 16 --distribution almost-sorted --sorting radix
 
 clean:
 	rm -f $(OBJS) $(TARGET)
