@@ -109,7 +109,7 @@ quality. The student must probe multiple aspects:
 | Weak scaling - native | $N/P = 2 \times 10^7$, uniform | $P\in \{4, 8, 16, 32 \}$ |
 | Weak scaling - container | same | same |
 | Skewed Input - native | $N = 10^8$, Zipf $\alpha = 1.1$ | $P\in \{8, 16, 32 \}$ |
-| Weak scaling - native | same | same |
+| Skewed Input - container | same | same |
 | OSU `osu_alltov` | 2-64 ranks, intra+inter node | message 1 KiB - 64 MiB |
 
 ---
