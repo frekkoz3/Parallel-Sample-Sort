@@ -5,6 +5,7 @@
 ### Code Side [HPC]
 
 * [ ] Implemententing new merging strategy
+* [ ] Implementing a parallel verifier
 * [ ] Adding the MPI part
 * [ ] Developing a simple analyzer and visualizer for the results (Python side)
 
