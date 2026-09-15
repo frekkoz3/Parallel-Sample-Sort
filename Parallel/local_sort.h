@@ -13,5 +13,6 @@ void merge_sort_omp (sort_key_t *data, sort_key_t *scratch, size_t begin, size_t
 void radix_sort_omp (sort_key_t *data, sort_key_t *scratch, size_t begin, size_t end, int digit_bits);
 void quick_sort_omp (sort_key_t *data, size_t begin, size_t end);
 void sort_virtual_chunks (sort_key_t *keys, sort_key_t *scratch, size_t nkeys, options_t *options);
+void sort_rank(sort_key_t *keys, sort_key_t *scratch, size_t nkeys, options_t *options);
 
 #endif /* LOCAL_SORT_H */

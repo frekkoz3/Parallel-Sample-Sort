@@ -565,6 +565,8 @@ void quick_sort_omp(sort_key_t *data,
 
 /*
   Sort each virtual rank's local chunk independently.
+  Notice : this is "useful" only if you do not use any MPI and so
+  you "simulate it" with virtual chunks
 */
 void sort_virtual_chunks (sort_key_t    *keys,        // key array split into virtual chunks
                           sort_key_t    *scratch,     // temporary array for merge sort
@@ -596,4 +598,27 @@ void sort_virtual_chunks (sort_key_t    *keys,        // key array split into vi
       quick_sort_omp (keys, begin, end);
     }
   }
+}
+
+/*
+  Sort each rank (this is just a router)
+*/
+void sort_rank(sort_key_t *keys,
+               sort_key_t *scratch,
+               size_t nkeys,
+               options_t *options)
+{
+    base_sorting sort_algo =
+        (base_sorting)options->sorting;
+
+    if (sort_algo == MERGE_SORT) {
+        merge_sort_omp(keys, scratch, 0, nkeys);
+    }
+    else if (sort_algo == RADIX_SORT) {
+        radix_sort_omp(keys, scratch, 0, nkeys,
+                       (int)options->radix_bits);
+    }
+    else if (sort_algo == QUICK_SORT) {
+        quick_sort_omp(keys, 0, nkeys);
+    }
 }

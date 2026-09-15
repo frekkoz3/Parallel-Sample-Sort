@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include "parser.h"
 #include "sample_sort.h"
+#include <mpi.h>
 
 /* 
    : ------------------------------------------------------ :
@@ -89,6 +90,14 @@ static void save_results(char *where_save, options_t *options, timing_t *timing,
 }
 
 int main (int argc, char **argv) {
+
+  MPI_Init(&argc, &argv);
+
+  int rank, nranks;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+
   options_t options;
   timing_t timing;
   sort_key_t *keys, *output;
@@ -133,6 +142,8 @@ int main (int argc, char **argv) {
 
   free (output);
   free (keys);
+
+  MPI_Finalize();
 
   return (!sorted_ok || !signature_ok) ? EXIT_FAILURE : EXIT_SUCCESS;
 }

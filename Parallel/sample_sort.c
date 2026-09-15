@@ -5,15 +5,15 @@
 #include <string.h>
 
 /*
-  Select regular samples from every sorted virtual chunk.
+  Select regular samples from every sorted mpi rank chunk.
   Regular sampling is later implemented before the MPI_ gatehring of samples; this
   serial function stores the gathered samples directly in one array.
 */
 static void
 select_regular_samples ( sort_key_t    *keys,                // locally sorted chunks
                          size_t         nkeys,               // total number of keys
-                         unsigned int   nchunks,             // number of virtual chunks
-                         size_t         samples_per_chunk,   // samples selected from each chunk
+                         unsigned int   nchunks,             // number of chunks (which are the number of mpi ranks)
+                         size_t         samples_per_chunk,   // samples selected from each chunk (which is an mpi rank)
                          sort_key_t    *samples              // gathered sample array
 		       )
 {
@@ -52,7 +52,7 @@ select_regular_samples ( sort_key_t    *keys,                // locally sorted c
 */
 static void
 choose_global_pivots ( sort_key_t    *samples,             // sorted gathered samples
-                       size_t         samples_per_chunk,   // samples contributed by each virtual rank
+                       size_t         samples_per_chunk,   // samples contributed by each mpi rank
                        unsigned int   nbuckets,            // number of output buckets
                        sort_key_t    *pivots               // output array of nbuckets - 1 pivots
 		     )
@@ -109,14 +109,14 @@ upper_bound_key ( sort_key_t   *data,    // sorted array
 }
 
 /*
-  Partition every sorted virtual chunk into nbuckets sorted subranges.
+  Partition every sorted chunk into nbuckets sorted subranges.
   In MPI this becomes the send counter and displacement arrays used by (possibly)
   MPI_Alltoall and MPI_Alltoallv.
 */
 static void
 build_bucket_bounds ( sort_key_t    *keys,       // locally sorted chunks
                       size_t         nkeys,      // total number of keys
-                      unsigned int   nchunks,    // number of virtual chunks
+                      unsigned int   nchunks,    // number of chunks
                       sort_key_t    *pivots,     // global pivots
                       size_t        *bounds      // output matrix nchunks x (nchunks + 1)
 		    )
@@ -158,7 +158,7 @@ build_bucket_bounds ( sort_key_t    *keys,       // locally sorted chunks
 */
 static void
 compute_bucket_starts ( size_t        *bounds,          // source/destination boundaries
-                        unsigned int   nchunks,         // number of virtual chunks and buckets
+                        unsigned int   nchunks,         // number of mpi ranks and buckets
                         size_t        *bucket_starts    // output prefix sum, length nchunks + 1
 		      )
 {
@@ -639,7 +639,7 @@ static void
 merge_all_buckets_omp ( sort_key_t    *keys,                // locally sorted source chunks
                     size_t            *bounds,              // source/destination boundaries
                     size_t            *bucket_starts,       // output prefix sum by destination bucket
-                    unsigned int       nchunks,             // number of virtual chunks and buckets
+                    unsigned int       nchunks,             // number of mpi_ranks and buckets
                     sort_key_t        *output,              // globally sorted output array
                     merging_strategy  merging_strat         // k-way merging strategy
 		  )
