@@ -5,7 +5,7 @@
 #include <string.h>
 
 /*
-  Select regular samples from every sorted mpi rank chunk.
+  Select regular samples from every sorted chunk.
   Regular sampling is later implemented before the MPI_ gatehring of samples; this
   serial function stores the gathered samples directly in one array.
 */
@@ -270,6 +270,7 @@ basic_iterative_k_way_merge_buckets ( sort_key_t    *keys,          // source so
 
   The implementation uses a ping-pong strategy based on
   the bucket and a temporary buffer between rounds
+  TO IMPROVE!!!
 */
 static void
 binary_iterative_k_way_merge_buckets (  sort_key_t    *keys,          // source sorted chunks
@@ -486,6 +487,7 @@ binary_iterative_k_way_merge_buckets (  sort_key_t    *keys,          // source 
 
 /*
   Heap direct K-way merge.
+  TO IMPLEMENT!!!
 */
 static void
 heap_direct_k_way_merge_buckets ( sort_key_t    *keys,          // source sorted chunks
@@ -559,6 +561,7 @@ heap_direct_k_way_merge_buckets ( sort_key_t    *keys,          // source sorted
 
 /*
   Tournament tree direct K-way merge.
+  TO IMPLEMENT!!!
 */
 static void
 tournament_tree_direct_k_way_merge_buckets (  sort_key_t    *keys,          // source sorted chunks
@@ -698,7 +701,7 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   t1 = wall_seconds ();
   timing->local_sort = t1 - t0;
 
-  if (options->nbuckets == 1) {
+  if (options->nbuckets == 1) { // remember n_buckets = number of mpi ranks!
     memcpy (output, keys, nkeys * sizeof (sort_key_t));
     free (scratch);
     timing->sampling = timing->partitioning = timing->merging = 0.0;
@@ -717,6 +720,8 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   bucket_starts  = malloc_array ((size_t) options->nbuckets + 1, sizeof (size_t));
 
   t0 = wall_seconds ();
+  // here locally select the regular samples and then send the sample to a common receiver 
+  // which must sort them and select global pivots
   select_regular_samples (keys, nkeys, options->nbuckets, samples_per_chunk, samples);
   
   base_sorting sort_algo = (base_sorting)options->sorting;
@@ -742,6 +747,8 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   // ··············································
   // have a global view
 
+  // now here locally we must form the various buckets 
+  // wrt each different global pivot
   t0 = wall_seconds ();
   build_bucket_bounds (keys, nkeys, options->nbuckets, pivots, bounds);
   compute_bucket_starts (bounds, options->nbuckets, bucket_starts);
@@ -751,6 +758,10 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   
   // ··············································
   // merge (here of course we lack exchanging data.. )
+  // each mpi rank must handle all the bucket corresponding
+  // to the pivot with its own mpi index
+  // once this is is done one mpi rank should receive all the buckets
+  // and simply stack them in the final output
 
   t0 = wall_seconds ();
   merge_all_buckets_omp (keys, bounds, bucket_starts, options->nbuckets, output, options->merging);

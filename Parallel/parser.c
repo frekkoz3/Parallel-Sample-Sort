@@ -22,8 +22,7 @@ print_usage ( char     *program_name   // executable name from argv[0]
   fprintf (stderr,
            "Usage: %s [options]\n\n"
            "Options:\n"
-           "  --n VALUE              number of keys to sort                    (%llu)\n"
-           "  --nbuckets VALUE       number of virtual ranks / buckets          (%u)\n"
+           "  --n VALUE              number of keys to sort                      (%llu)\n"
            "  --oversample VALUE     regular samples per virtual rank multiplier (%llu)\n"
            "  --seed VALUE           random seed for generated inputs            (%llu)\n"
            "  --distribution NAME    uniform | skewed | few-unique | sorted | reverse | almost-sorted (%s)\n"
@@ -32,7 +31,7 @@ print_usage ( char     *program_name   // executable name from argv[0]
            "  --merging_strat NAME   final merging strategy basic | bin | heap | tournament (%s)\n"
            "  --print-limit VALUE    print the first VALUE sorted keys           (%llu)\n"
            "  --help                 show this help message\n\n",
-           program_name, (unsigned long long) DEFAULT_NKEYS, DEFAULT_NBUCKETS,
+           program_name, (unsigned long long) DEFAULT_NKEYS,
            (unsigned long long) DEFAULT_OVERSAMPLE, (unsigned long long) DEFAULT_SEED,
            DEFAULT_DISTRIBUTION, DEFAULT_SORT, DEFAULT_RADIX_BITS, DEFAULT_MERGING_STRAT ,(unsigned long long) DEFAULT_PRINT_LIMIT);
 }
@@ -45,7 +44,6 @@ set_default_options ( options_t   *options   // output options structure
 		      )
 {
   options->nkeys             = (size_t) DEFAULT_NKEYS;
-  options->nbuckets          = DEFAULT_NBUCKETS;
   options->nthreads          = omp_get_max_threads();
   options->oversample        = (size_t) DEFAULT_OVERSAMPLE;
   options->seed              = DEFAULT_SEED;
@@ -57,7 +55,7 @@ set_default_options ( options_t   *options   // output options structure
   options->merging           = BINARY_ITERATIVE_KWM;
   options->merging_name      = DEFAULT_MERGING_STRAT;
   options->print_limit       = (size_t) DEFAULT_PRINT_LIMIT;
-}
+} // the nbuckets are handled in the main
 
 /*
   Convert a distribution name into the internal enum.  

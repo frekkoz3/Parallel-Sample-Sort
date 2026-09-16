@@ -8,7 +8,6 @@
 // #include <mpi.h>
 
 #define DEFAULT_NKEYS          (1000000ULL)
-#define DEFAULT_NBUCKETS       (8u)
 #define DEFAULT_OVERSAMPLE     (1ULL)
 #define DEFAULT_SEED           (1ULL)
 #define DEFAULT_DISTRIBUTION   "uniform"

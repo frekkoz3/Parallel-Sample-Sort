@@ -91,13 +91,6 @@ static void save_results(char *where_save, options_t *options, timing_t *timing,
 
 int main (int argc, char **argv) {
 
-  MPI_Init(&argc, &argv);
-
-  int rank, nranks;
-
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nranks);
-
   options_t options;
   timing_t timing;
   sort_key_t *keys, *output;
@@ -105,7 +98,20 @@ int main (int argc, char **argv) {
   size_t bad_index;
 
   if (parse_options (argc, argv, &options) != 0) return EXIT_FAILURE;
-  if (validate_options (&options) != 0) return EXIT_FAILURE;
+  
+  MPI_Init(&argc, &argv);
+
+  int rank, nranks;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+
+  printf("%d", rank);
+  printf("%d", nranks);  
+
+  // Automatically set nbuckets to the number of MPI ranks provided by mpirun
+  options.nbuckets = (unsigned int)nranks;
+  if (validate_options (&options) != 0) return EXIT_FAILURE;  
 
   memset (&timing, 0, sizeof (timing));
 
