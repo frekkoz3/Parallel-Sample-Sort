@@ -99,7 +99,6 @@ typedef struct {
   uint64_t xor_value;
 } signature_t;
 
-double wall_seconds (void);
 void *malloc_array (size_t count, size_t element_size);
 uint64_t splitmix64_next (uint64_t * restrict state);
 uint64_t mix_key (sort_key_t key);

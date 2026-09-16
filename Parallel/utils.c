@@ -12,18 +12,6 @@
 */ 
 
 /*
-  Return the current monotonic time in seconds.
-*/
-double
-wall_seconds (void){
-
-  struct timespec now;
-  clock_gettime (CLOCK_MONOTONIC, &now);
-  return (double) now.tv_sec + 1.0e-9 * (double) now.tv_nsec;
-
-}
-
-/*
   Allocate an array with size checking.
 */
 void *

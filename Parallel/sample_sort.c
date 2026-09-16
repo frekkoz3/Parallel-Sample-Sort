@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <mpi.h>
 
 /*
   Select regular samples from every sorted chunk.
@@ -691,14 +692,19 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   double      t0;
   double      t1;
 
+  int rank, nranks;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+
   scratch = malloc_array (nkeys, sizeof (sort_key_t));
 
   // ··············································
   // sort your local chunk
 
-  t0 = wall_seconds ();
+  t0 = MPI_Wtime();
   sort_virtual_chunks (keys, scratch, nkeys, options);
-  t1 = wall_seconds ();
+  t1 = MPI_Wtime();
   timing->local_sort = t1 - t0;
 
   if (options->nbuckets == 1) { // remember n_buckets = number of mpi ranks!
@@ -719,7 +725,7 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   bounds         = malloc_array ((size_t) options->nbuckets * ((size_t) options->nbuckets + 1), sizeof (size_t));
   bucket_starts  = malloc_array ((size_t) options->nbuckets + 1, sizeof (size_t));
 
-  t0 = wall_seconds ();
+  t0 = MPI_Wtime();
   // here locally select the regular samples and then send the sample to a common receiver 
   // which must sort them and select global pivots
   select_regular_samples (keys, nkeys, options->nbuckets, samples_per_chunk, samples);
@@ -741,19 +747,34 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   }
   
   choose_global_pivots (samples, samples_per_chunk, options->nbuckets, pivots);
-  t1 = wall_seconds ();
+  t1 = MPI_Wtime();
+
+  double t_max_elapsed;
+
   timing->sampling = t1 - t0;
+  // A parallel step is only as fast as its slowest process.
+  MPI_Reduce(&timing->sampling, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+      timing->sampling = t_max_elapsed;
+  }
 
   // ··············································
   // have a global view
 
   // now here locally we must form the various buckets 
   // wrt each different global pivot
-  t0 = wall_seconds ();
+  t0 = MPI_Wtime();
   build_bucket_bounds (keys, nkeys, options->nbuckets, pivots, bounds);
   compute_bucket_starts (bounds, options->nbuckets, bucket_starts);
-  t1 = wall_seconds ();
+  t1 = MPI_Wtime ();
   timing->partitioning = t1 - t0;
+  // A parallel step is only as fast as its slowest process.
+  MPI_Reduce(&timing->partitioning, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+      timing->partitioning = t_max_elapsed;
+  }
 
   
   // ··············································
@@ -763,10 +784,16 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   // once this is is done one mpi rank should receive all the buckets
   // and simply stack them in the final output
 
-  t0 = wall_seconds ();
+  t0 = MPI_Wtime();
   merge_all_buckets_omp (keys, bounds, bucket_starts, options->nbuckets, output, options->merging);
-  t1 = wall_seconds ();
+  t1 = MPI_Wtime();
   timing->merging = t1 - t0;
+  // A parallel step is only as fast as its slowest process.
+  MPI_Reduce(&timing->merging, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+      timing->merging = t_max_elapsed;
+  }
 
   free (bucket_starts);
   free (bounds);
