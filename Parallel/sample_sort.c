@@ -731,23 +731,27 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   select_regular_samples (keys, nkeys, options->nbuckets, samples_per_chunk, samples);
   
   // we must send the local sample to rank 0. here it must sample them
+
+  if (rank == 0){
+    base_sorting sort_algo = (base_sorting)options->sorting;
+    if (sort_algo == MERGE_SORT) {
+      sort_key_t *sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
+      merge_sort_omp (samples, sample_scratch, 0, nsamples);
+      free (sample_scratch);
+    }
+    if (sort_algo == RADIX_SORT){
+      sort_key_t *sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
+      int digit_bits = (int)options->radix_bits;
+      radix_sort_omp (samples, sample_scratch, 0, nsamples, digit_bits);
+      free (sample_scratch);
+    }
+    if (sort_algo == QUICK_SORT){
+      quick_sort_omp (samples, 0, nsamples);
+    }
+  }
   
-  base_sorting sort_algo = (base_sorting)options->sorting;
-  if (sort_algo == MERGE_SORT) {
-    sort_key_t *sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
-    merge_sort_omp (samples, sample_scratch, 0, nsamples);
-    free (sample_scratch);
-  }
-  if (sort_algo == RADIX_SORT){
-    sort_key_t *sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));
-    int digit_bits = (int)options->radix_bits;
-    radix_sort_omp (samples, sample_scratch, 0, nsamples, digit_bits);
-    free (sample_scratch);
-  }
-  if (sort_algo == QUICK_SORT){
-    quick_sort_omp (samples, 0, nsamples);
-  }
-  
+  // here we must select the pivots and send them to the various processes
+  // we must send each mpi rank its own pivot and all the other pivot
   choose_global_pivots (samples, samples_per_chunk, options->nbuckets, pivots);
   t1 = MPI_Wtime();
 
@@ -780,12 +784,14 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
 
   
   // ··············································
-  // merge (here of course we lack exchanging data.. )
+  // merge
   // each mpi rank must handle all the bucket corresponding
   // to the pivot with its own mpi index
-  // once this is is done one mpi rank should receive all the buckets
-  // and simply stack them in the final output
-
+  // so here we will have a good Receive buckets from the others !!!
+  // and of course a Send buckets to the others !!!
+  // then we just k-way merge the received array into output
+  // CAN WE ACTUALLY KNOW THE DIMENSION OF OUTPUT AT PRIOR?
+  // no i do not think so : we must compute it and then allocate it
   t0 = MPI_Wtime();
   merge_all_buckets_omp (keys, bounds, bucket_starts, options->nbuckets, output, options->merging);
   t1 = MPI_Wtime();
