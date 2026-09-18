@@ -59,7 +59,7 @@ splitmix64_next ( uint64_t * restrict state   // mutable generator state
   The function is used for order-independent signatures so that mistakaes in
   accidental bucket-copy mistakes can be detected
 */
-uint64_t
+inline uint64_t
 mix_key ( sort_key_t key   // key value to mix
 	  ) {
 
@@ -146,17 +146,21 @@ compute_signature ( sort_key_t   *keys,    // array to inspect
                     size_t        nkeys    // number of keys
 		  )
 {
+  uint64_t sum = 0;
+  uint64_t xor_value = 0;
 
-  signature_t sig = {0, 0};
-
+  #pragma omp parallel for reduction(+:sum) reduction(^:xor_value)
   for (size_t i = 0; i < nkeys; i++) {
-    uint64_t mixed = mix_key (keys[i]);
-    sig.sum += mixed;
-    sig.xor_value ^= mixed;
+        uint64_t mixed = mix_key(keys[i]);
+        sum += mixed;
+        xor_value ^= mixed;
   }
 
-  return sig;
+  signature_t sig;
+  sig.sum = sum;
+  sig.xor_value = xor_value;
 
+  return sig;
 }
 
 /*
@@ -184,7 +188,7 @@ verify_sorted ( sort_key_t *keys,       // array to verify
                  size_t    *bad_index   // first failing index, if any
 	      )
 {
-
+  
   for (size_t i = 1; i < nkeys; i++) {
 
     if (keys[i - 1] > keys[i]) {
