@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <limits.h>
 // #include <mpi.h>
 
 #define DEFAULT_NKEYS          (1000000ULL)
@@ -15,6 +16,22 @@
 #define DEFAULT_MERGING_STRAT  "bin"
 #define DEFAULT_RADIX_BITS     (8u)
 #define DEFAULT_PRINT_LIMIT    (0ULL)
+
+// Compute the size_t equivalent for MPI
+// this is needed for the bad_index
+#if SIZE_MAX == UCHAR_MAX
+  #define MPI_SIZE_T MPI_UNSIGNED_CHAR
+#elif SIZE_MAX == USHRT_MAX
+  #define MPI_SIZE_T MPI_UNSIGNED_SHORT
+#elif SIZE_MAX == UINT_MAX
+  #define MPI_SIZE_T MPI_UNSIGNED
+#elif SIZE_MAX == ULONG_MAX
+  #define MPI_SIZE_T MPI_UNSIGNED_LONG
+#elif SIZE_MAX == ULLONG_MAX
+  #define MPI_SIZE_T MPI_UNSIGNED_LONG_LONG
+#else
+  #error "No size_t recognized"
+#endif
 
 // Select type based on compile-time flag
 #ifdef USE_UINT32

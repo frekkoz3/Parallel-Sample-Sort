@@ -111,6 +111,9 @@ int main (int argc, char **argv) {
 
   memset (&timing, 0, sizeof (timing));
 
+  // select the right number of keys for each rank
+  size_t local_nkeys = options.nkeys; // just a placeholder
+
   keys = malloc_array (options.nkeys, sizeof (sort_key_t));
   output = malloc_array (options.nkeys, sizeof (sort_key_t));
 
@@ -133,6 +136,9 @@ int main (int argc, char **argv) {
   timing.signature = MPI_Wtime () - t0;
   // A parallel step is only as fast as its slowest process.
   MPI_Reduce(&timing.signature, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  signature_t before_sig_all;
+  MPI_Reduce(&before_sig.sum, &before_sig_all.sum, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&before_sig.xor_value, &before_sig_all.xor_value, 1, MPI_UINT64_T, MPI_BXOR, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {
       timing.signature = t_max_elapsed;
@@ -140,37 +146,74 @@ int main (int argc, char **argv) {
 
   sample_sort (keys, output, options.nkeys, &options, &timing);
 
-  t0 = MPI_Wtime ();
-  int sorted_ok = verify_sorted (output, options.nkeys, &bad_index);
-  timing.sort_verification = MPI_Wtime () - t0;
-  // A parallel step is only as fast as its slowest process.
+  t0 = MPI_Wtime();
+  int local_err = 1 - verify_sorted(output, options.nkeys, &bad_index); // 1 if a local error occours, 0 otherwise
+  bad_index = (local_err == 1) ? options.nkeys + 1 : bad_index + local_nkeys*rank; // shifting it wrt to the rank size
+  // if no bad index we set the bad index to the maximum number of keys so the minimum reduction does not create problem
+
+  int boundary_err = 0;
+  sort_key_t following_first;
+
+  if (rank > 0 && rank < (nranks - 1)) {
+    MPI_Sendrecv(&output[0], 1, MPI_SORT_KEY_T, rank - 1, 0,
+                &following_first, 1, MPI_SORT_KEY_T, rank + 1, 0,
+                MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                
+    if (options.nkeys > 0 && output[options.nkeys - 1] > following_first) {
+        boundary_err = 1;
+        bad_index = local_nkeys * (rank + 1); // first index of the following rank
+    }
+  } else if (rank > 0) {
+    MPI_Send(&output[0], 1, MPI_SORT_KEY_T, rank - 1, 0, MPI_COMM_WORLD);
+  } else if (rank < (nranks - 1)) {
+    MPI_Recv(&following_first, 1, MPI_SORT_KEY_T, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    if (options.nkeys > 0 && output[options.nkeys - 1] > following_first) {
+        boundary_err = 1;
+        bad_index = local_nkeys * (rank + 1); // first index of the following rank
+    }
+  }
+  size_t global_bad_index = 0;
+  MPI_Reduce(&bad_index, &global_bad_index, 1, MPI_SIZE_T, MPI_MIN, 0, MPI_COMM_WORLD);
+
+  timing.sort_verification = MPI_Wtime() - t0;
+
+  int total_local_errs = 0;
+  int total_boundary_errs = 0;
+
+  MPI_Reduce(&local_err, &total_local_errs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&boundary_err, &total_boundary_errs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(&timing.sort_verification, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
+  int sorted_ok = 1;
   if (rank == 0) {
-      timing.sort_verification = t_max_elapsed;
+    timing.sort_verification = t_max_elapsed;
+    sorted_ok = (total_local_errs == 0) && (total_boundary_errs == 0);
   }
 
-  t0 = MPI_Wtime ();
-  after_sig = compute_signature (output, options.nkeys);
-  int signature_ok = same_signature (before_sig, after_sig);
-  timing.signature_verification = MPI_Wtime () - t0;
-  // A parallel step is only as fast as its slowest process.
+  t0 = MPI_Wtime();
+  after_sig = compute_signature(output, local_nkeys);
+
+  signature_t after_sig_all;
+  MPI_Reduce(&after_sig.sum, &after_sig_all.sum, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&after_sig.xor_value, &after_sig_all.xor_value, 1, MPI_UINT64_T, MPI_BXOR, 0, MPI_COMM_WORLD);
+
+  timing.signature_verification = MPI_Wtime() - t0;
   MPI_Reduce(&timing.signature_verification, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
+  int signature_ok = 1;
   if (rank == 0) {
-      timing.signature_verification = t_max_elapsed;
+    timing.signature_verification = t_max_elapsed;
+    signature_ok = same_signature(before_sig_all, after_sig_all);
   }
 
-  timing.total = MPI_Wtime () - t_start;
-  // A parallel step is only as fast as its slowest process.
+  timing.total = MPI_Wtime() - t_start;
   MPI_Reduce(&timing.total, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-
-  if (rank == 0) {
-      timing.total = t_max_elapsed;
+  if (rank == 0){
+    timing.total = t_max_elapsed;
   }
 
   if (rank == 0){
-    print_summary (&options, &timing, before_sig, after_sig, sorted_ok, signature_ok, bad_index);
+    print_summary (&options, &timing, before_sig_all, after_sig_all, sorted_ok, signature_ok, global_bad_index);
     print_key_prefix (output, options.nkeys, options.print_limit);
 
     save_results("./results/results.csv", &options, &timing, sorted_ok, signature_ok);
