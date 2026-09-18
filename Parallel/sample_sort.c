@@ -730,6 +730,8 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   // which must sort them and select global pivots
   select_regular_samples (keys, nkeys, options->nbuckets, samples_per_chunk, samples);
   
+  // we must send the local sample to rank 0. here it must sample them
+  
   base_sorting sort_algo = (base_sorting)options->sorting;
   if (sort_algo == MERGE_SORT) {
     sort_key_t *sample_scratch = malloc_array (nsamples, sizeof (sort_key_t));

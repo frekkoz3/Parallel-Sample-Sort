@@ -104,23 +104,35 @@ int main (int argc, char **argv) {
   signature_t before_sig, after_sig;
   size_t bad_index;
 
-  if (parse_options (argc, argv, &options) != 0) return EXIT_FAILURE;
+  if (parse_options (argc, argv, &options) != 0) {
+    MPI_Finalize();
+    return EXIT_FAILURE;
+  }
   // Automatically set nbuckets to the number of MPI ranks provided by mpirun
   options.nbuckets = (unsigned int)nranks;
-  if (validate_options (&options) != 0) return EXIT_FAILURE;  
+  if (validate_options (&options) != 0)  {
+    MPI_Finalize();
+    return EXIT_FAILURE;
+  }
 
   memset (&timing, 0, sizeof (timing));
 
   // select the right number of keys for each rank
-  size_t local_nkeys = options.nkeys; // just a placeholder
+  size_t local_nkeys = options.nkeys/nranks; // just a placeholder
+  int remaining_keys = options.nkeys%nranks;
+  for (int i = 0; i < remaining_keys; i++){
+    if (i == rank) local_nkeys++;// round robin allocations of the remaining keys
+  }
 
-  keys = malloc_array (options.nkeys, sizeof (sort_key_t));
-  output = malloc_array (options.nkeys, sizeof (sort_key_t));
+  size_t global_offset = rank * local_nkeys + (rank < (int)remaining_keys ? rank : remaining_keys); // this is the prefix of a given process
+
+  keys = malloc_array (local_nkeys, sizeof (sort_key_t));
+  output = malloc_array (local_nkeys, sizeof (sort_key_t));
 
   double t_start = MPI_Wtime ();
 
   double t0 = MPI_Wtime ();
-  generate_keys (keys, options.nkeys, &options);
+  generate_keys (keys, local_nkeys, &options);
   timing.generation = MPI_Wtime () - t0;
 
   double t_max_elapsed;
@@ -132,7 +144,7 @@ int main (int argc, char **argv) {
   }
 
   t0 = MPI_Wtime ();
-  before_sig = compute_signature (keys, options.nkeys);
+  before_sig = compute_signature (keys, local_nkeys);
   timing.signature = MPI_Wtime () - t0;
   // A parallel step is only as fast as its slowest process.
   MPI_Reduce(&timing.signature, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -144,11 +156,11 @@ int main (int argc, char **argv) {
       timing.signature = t_max_elapsed;
   }
 
-  sample_sort (keys, output, options.nkeys, &options, &timing);
+  sample_sort (keys, output, local_nkeys, &options, &timing);
 
   t0 = MPI_Wtime();
-  int local_err = 1 - verify_sorted(output, options.nkeys, &bad_index); // 1 if a local error occours, 0 otherwise
-  bad_index = (local_err == 1) ? options.nkeys + 1 : bad_index + local_nkeys*rank; // shifting it wrt to the rank size
+  int local_err = 1 - verify_sorted(output, local_nkeys, &bad_index); // 1 if a local error occours, 0 otherwise
+  bad_index = (local_err == 1) ? options.nkeys + 1 : bad_index + global_offset; // shifting it wrt to the rank size
   // if no bad index we set the bad index to the maximum number of keys so the minimum reduction does not create problem
 
   int boundary_err = 0;
@@ -159,17 +171,17 @@ int main (int argc, char **argv) {
                 &following_first, 1, MPI_SORT_KEY_T, rank + 1, 0,
                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 
-    if (options.nkeys > 0 && output[options.nkeys - 1] > following_first) {
+    if (local_nkeys > 0 && output[local_nkeys - 1] > following_first) {
         boundary_err = 1;
-        bad_index = local_nkeys * (rank + 1); // first index of the following rank
+        bad_index = global_offset + local_nkeys; // first index of the following rank
     }
   } else if (rank > 0) {
     MPI_Send(&output[0], 1, MPI_SORT_KEY_T, rank - 1, 0, MPI_COMM_WORLD);
   } else if (rank < (nranks - 1)) {
     MPI_Recv(&following_first, 1, MPI_SORT_KEY_T, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    if (options.nkeys > 0 && output[options.nkeys - 1] > following_first) {
+    if (local_nkeys > 0 && output[local_nkeys - 1] > following_first) {
         boundary_err = 1;
-        bad_index = local_nkeys * (rank + 1); // first index of the following rank
+        bad_index = global_offset + local_nkeys; // first index of the following rank
     }
   }
   size_t global_bad_index = 0;
@@ -214,7 +226,7 @@ int main (int argc, char **argv) {
 
   if (rank == 0){
     print_summary (&options, &timing, before_sig_all, after_sig_all, sorted_ok, signature_ok, global_bad_index);
-    print_key_prefix (output, options.nkeys, options.print_limit);
+    print_key_prefix (output, local_nkeys, options.print_limit);
 
     save_results("./results/results.csv", &options, &timing, sorted_ok, signature_ok);
   }
