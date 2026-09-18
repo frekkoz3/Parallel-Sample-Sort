@@ -61,3 +61,7 @@ n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merg
 100000,64,2,2,1,uniform,radix,basic,1,no,yes,0.000441128,0.001426615,0.000000959,0.000000281,0.000618687,0.000052132,0.003519179
 n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
 100000,64,2,2,1,uniform,radix,basic,1,no,yes,0.000473799,0.001920432,0.000000879,0.000000231,0.000682825,0.000035401,0.003343910
+n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
+10000000,64,2,2,1,uniform,radix,basic,1,no,yes,0.041509612,0.285751172,0.000001596,0.000002473,0.081582309,0.008395529,0.446663753
+n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
+10000000,64,2,2,1,uniform,radix,basic,1,no,yes,0.042686454,0.277705775,0.000001296,0.000002290,0.088622418,0.016409837,0.454242822

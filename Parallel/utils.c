@@ -182,20 +182,35 @@ same_signature ( signature_t a,    // first signature
   You should map to the parallel case
   
 */
-int
+int 
 verify_sorted ( sort_key_t *keys,       // array to verify
                  size_t     nkeys,      // number of keys
                  size_t    *bad_index   // first failing index, if any
 	      )
 {
-  
+  size_t first_bad = nkeys; // this is surelly greater then any other possible value
+
+  // this parallelization does not actually help if there are errors 
+  // in the first N/P values of the array
+  // anyway, assuming that the sorting algorithm works, 
+  // this does make sense since it should 
+  // potentially speed up the process by a factor of P
+  // notice also : we cannot use pragma cancel here. why?
+  // we are doing a min reduction on the indexes!!!
+  // if we were to return from a process which is working in a
+  // "taller" section of the array it could return the false minimum!
+  #pragma omp parallel for schedule(static) reduction(min : first_bad)
   for (size_t i = 1; i < nkeys; i++) {
-
     if (keys[i - 1] > keys[i]) {
-      *bad_index = i;
-      return 0;
+      if (i < first_bad) {
+        first_bad = i;
+      }
     }
+  }
 
+  if (first_bad < nkeys) {
+    *bad_index = first_bad;
+    return 0;
   }
 
   *bad_index = 0;
