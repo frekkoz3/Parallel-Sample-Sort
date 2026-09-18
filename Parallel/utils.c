@@ -178,9 +178,6 @@ same_signature ( signature_t a,    // first signature
 
 /*
   Check that the array is globally non-decreasing.
-  This is the main, perhaps obvious, correctness test requested for the serial baseline
-  You should map to the parallel case
-  
 */
 int 
 verify_sorted ( sort_key_t *keys,       // array to verify
