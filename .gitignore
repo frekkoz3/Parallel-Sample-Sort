@@ -3,3 +3,4 @@ Parallel/sample_sort_omp
 .vscode
 *.o
 o.out
+Parallel/sample_sort_mpi

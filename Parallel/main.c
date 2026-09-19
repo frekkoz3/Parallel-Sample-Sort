@@ -16,8 +16,8 @@
 static void print_summary (options_t *options, timing_t *timing, signature_t before_sig, signature_t after_sig, int sorted_ok, int signature_ok, size_t bad_index) {
   printf ("n_keys                   %zu\n", options->nkeys);
   printf ("n_bits                   %d\n", N_BITS);
-  printf ("n_ranks,                 %u\n", options->nbuckets);
-  printf ("n_threads,               %u\n", options->nthreads);
+  printf ("n_ranks                  %u\n", options->nbuckets);
+  printf ("n_threads                %u\n", options->nthreads);
   printf ("oversample               %zu\n", options->oversample);
   printf ("distribution             %s\n", options->distribution_name);
   printf ("local sorting algorithm  %s\n", options->sorting_name);
@@ -52,7 +52,7 @@ static void save_results(char *where_save, options_t *options, timing_t *timing,
   char *header = "n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds\n";
   int len = strlen(header);
   // checking for header existence
-  char buffer[len + 10]; // a little extra char for possible special characters
+  char buffer[2*len]; // a little extra char for possible special characters
 
   rewind(file);
 
@@ -124,10 +124,11 @@ int main (int argc, char **argv) {
     if (i == rank) local_nkeys++;// round robin allocations of the remaining keys
   }
 
-  size_t global_offset = rank * local_nkeys + (rank < (int)remaining_keys ? rank : remaining_keys); // this is the prefix of a given process
+  size_t *out_nkeys_all = malloc_array(nranks, sizeof (size_t)); // this contains the dimension of each final bucket
+  // which will be used for the global offset computation
 
   keys = malloc_array (local_nkeys, sizeof (sort_key_t));
-  output = malloc_array (local_nkeys, sizeof (sort_key_t));
+  output = NULL; // this will be allocated later in sample sort
 
   double t_start = MPI_Wtime ();
 
@@ -156,32 +157,37 @@ int main (int argc, char **argv) {
       timing.signature = t_max_elapsed;
   }
 
-  sample_sort (keys, output, local_nkeys, &options, &timing);
+  sample_sort (keys, &output, local_nkeys, out_nkeys_all, &options, &timing);
+  // now we must recompute the global offset!!!
+  // because once the sample sort is happened different chunks have different sizes
+  MPI_Allgather(&out_nkeys_all[rank], 1, MPI_SIZE_T, out_nkeys_all, 1, MPI_SIZE_T, MPI_COMM_WORLD);
+  size_t global_offset = 0;
+  for (int r = 0; r < rank; r++)
+    global_offset += out_nkeys_all[r];
+  size_t out_nkeys = out_nkeys_all[rank];
 
   t0 = MPI_Wtime();
-  int local_err = 1 - verify_sorted(output, local_nkeys, &bad_index); // 1 if a local error occours, 0 otherwise
-  bad_index = (local_err == 1) ? options.nkeys + 1 : bad_index + global_offset; // shifting it wrt to the rank size
+  int local_err = 1 - verify_sorted(output, out_nkeys, &bad_index); // 1 if a local error occours, 0 otherwise
+  bad_index = (local_err == 0) ? options.nkeys + 1 : bad_index + global_offset; // shifting it wrt to the rank size
   // if no bad index we set the bad index to the maximum number of keys so the minimum reduction does not create problem
 
   int boundary_err = 0;
   sort_key_t following_first;
 
   if (rank > 0 && rank < (nranks - 1)) {
-    MPI_Sendrecv(&output[0], 1, MPI_SORT_KEY_T, rank - 1, 0,
-                &following_first, 1, MPI_SORT_KEY_T, rank + 1, 0,
-                MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(&output[0], 1, MPI_SORT_KEY_T, rank - 1, 0, &following_first, 1, MPI_SORT_KEY_T, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 
-    if (local_nkeys > 0 && output[local_nkeys - 1] > following_first) {
+    if (out_nkeys > 0 && output[out_nkeys - 1] > following_first) {
         boundary_err = 1;
-        bad_index = global_offset + local_nkeys; // first index of the following rank
+        bad_index = global_offset + out_nkeys; // first index of the following rank
     }
   } else if (rank > 0) {
     MPI_Send(&output[0], 1, MPI_SORT_KEY_T, rank - 1, 0, MPI_COMM_WORLD);
   } else if (rank < (nranks - 1)) {
     MPI_Recv(&following_first, 1, MPI_SORT_KEY_T, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    if (local_nkeys > 0 && output[local_nkeys - 1] > following_first) {
+    if (out_nkeys > 0 && output[out_nkeys - 1] > following_first) {
         boundary_err = 1;
-        bad_index = global_offset + local_nkeys; // first index of the following rank
+        bad_index = global_offset + out_nkeys; // first index of the following rank
     }
   }
   size_t global_bad_index = 0;
@@ -203,7 +209,7 @@ int main (int argc, char **argv) {
   }
 
   t0 = MPI_Wtime();
-  after_sig = compute_signature(output, local_nkeys);
+  after_sig = compute_signature(output, out_nkeys);
 
   signature_t after_sig_all;
   MPI_Reduce(&after_sig.sum, &after_sig_all.sum, 1, MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -226,8 +232,7 @@ int main (int argc, char **argv) {
 
   if (rank == 0){
     print_summary (&options, &timing, before_sig_all, after_sig_all, sorted_ok, signature_ok, global_bad_index);
-    print_key_prefix (output, local_nkeys, options.print_limit);
-
+    print_key_prefix (output, out_nkeys, options.print_limit);
     save_results("./results/results.csv", &options, &timing, sorted_ok, signature_ok);
   }
 
