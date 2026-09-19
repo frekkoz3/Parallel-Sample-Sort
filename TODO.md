@@ -6,7 +6,7 @@
 
 * [ ] Implemententing new merging strategy
 * [x] Implementing a parallel verifier
-* [ ] Adding the MPI part
+* [x] Adding the MPI part
 * [ ] Developing a simple analyzer and visualizer for the results (Python side)
 
 ### Experiment Side [HPC]
