@@ -48,7 +48,7 @@ static void save_results(char *where_save, options_t *options, timing_t *timing,
         perror("fopen");
   }
   rewind(file);
-
+  /* // removing it since it creates problem
   char *header = "n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds\n";
   int len = strlen(header);
   // checking for header existence
@@ -65,6 +65,7 @@ static void save_results(char *where_save, options_t *options, timing_t *timing,
   if (!has_header) {
       fputs(header, file);
   }
+  */
 
   fprintf (file, "%zu,", options->nkeys);
   fprintf (file, "%d,", N_BITS);

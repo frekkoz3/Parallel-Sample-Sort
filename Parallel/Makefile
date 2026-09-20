@@ -28,7 +28,7 @@ run: $(TARGET)
 		--n 100000000 \
 		--distribution uniform \
 		--merging_strat basic \
-		--sorting radix
+		--sorting merge
 
 check: $(TARGET)
 	@echo "Running MPI verification suite with RANKS=$(RANKS), OMP_NUM_THREADS=$(THREADS)..."

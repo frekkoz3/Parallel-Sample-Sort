@@ -66,7 +66,6 @@ typedef enum {
   BASIC_ITERATIVE_KWM,
   BINARY_ITERATIVE_KWM,
   HEAP_DIRECT_KWM,
-  TORUNAMENT_TREE_DIRECT_KWM
 } merging_strategy;
 
 /*

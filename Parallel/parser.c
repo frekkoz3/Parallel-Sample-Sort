@@ -28,7 +28,7 @@ print_usage ( char     *program_name   // executable name from argv[0]
            "  --distribution NAME    uniform | skewed | few-unique | sorted | reverse | almost-sorted (%s)\n"
            "  --sorting NAME         merge | quick | radix (%s)\n"
            "  --radix_bits VALUE     digit size for radix sort (%d)\n"
-           "  --merging_strat NAME   final merging strategy basic | bin | heap | tournament (%s)\n"
+           "  --merging_strat NAME   final merging strategy basic | bin | heap (%s)\n"
            "  --print-limit VALUE    print the first VALUE sorted keys           (%llu)\n"
            "  --help                 show this help message\n\n",
            program_name, (unsigned long long) DEFAULT_NKEYS,
@@ -52,7 +52,7 @@ set_default_options ( options_t   *options   // output options structure
   options->sorting           = MERGE_SORT;
   options->sorting_name      = DEFAULT_SORT;
   options->radix_bits        = DEFAULT_RADIX_BITS;
-  options->merging           = BINARY_ITERATIVE_KWM;
+  options->merging           = BASIC_ITERATIVE_KWM;
   options->merging_name      = DEFAULT_MERGING_STRAT;
   options->print_limit       = (size_t) DEFAULT_PRINT_LIMIT;
 } // the nbuckets are handled in the main
@@ -106,7 +106,6 @@ parse_merging_name (char             *name,          // user-provided distributi
   if (strcmp (name, "basic") == 0) { *merging = BASIC_ITERATIVE_KWM; return 0; }
   if (strcmp (name, "bin") == 0) { *merging = BINARY_ITERATIVE_KWM; return 0; }
   if (strcmp (name, "heap") == 0) { *merging = HEAP_DIRECT_KWM; return 0; }
-  if (strcmp (name, "tournament") == 0) { *merging = TORUNAMENT_TREE_DIRECT_KWM; return 0; }
   fprintf (stderr, "Unknown distribution '%s'\n", name);
   return -1;
 }
