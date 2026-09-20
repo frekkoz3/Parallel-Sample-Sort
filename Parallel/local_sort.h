@@ -3,7 +3,8 @@
 
 #include "utils.h"
 
-#define DEFAULT_SERIAL_CUTOFF 1024
+#define DEFAULT_SERIAL_CUTOFF 25000
+#define INSERTION_SORT_CUTOFF  8
 
 // MERGE SORT
 

@@ -6,6 +6,30 @@
 
 /* 
    : ------------------------------------------------------ :
+   : INSERTION SORT                                         :
+   : ------------------------------------------------------ :
+*/ 
+static 
+void insertion_sort_range(  sort_key_t *data,      // array containing the range to sort
+                            size_t      begin,     // first index of the sorted range
+                            size_t      end        // one-past-last index of the sorted range
+)
+{
+  sort_key_t temp;
+  int j;
+  for (int i = (int)(begin + 1); i < (int)end; i++){
+    temp = data[i];
+    j = i - 1;
+    while(j >= 0 && data[j] > temp){
+      data[j+1] = data[j];
+      j--;
+    }
+    data[j+1] = temp;
+  }
+}
+
+/* 
+   : ------------------------------------------------------ :
    : MERGE SORT                                             :
    : ------------------------------------------------------ :
 */ 
@@ -463,41 +487,134 @@ static void swap(sort_key_t *a,
 */ 
 
 /*
-  Partition data[begin:end).
-  Returns the final position of the pivot.
+  MEDIAN3
+  return the median between 3 elements
 */
-static size_t partition(sort_key_t *arr,
-                        size_t begin, 
-                        size_t end
-                      )
+static sort_key_t median3(sort_key_t a,
+                          sort_key_t b,
+                          sort_key_t c)
 {
-    sort_key_t pivot = arr[begin];
+    if (a < b) {
+        if (b < c) return b;
+        return a < c ? c : a;
+    } else {
+        if (a < c) return a;
+        return b < c ? c : b;
+    }
+}
 
-    size_t i = begin + 1;
-    size_t j = end - 1;
+/*
+ Tukey's ninther pivoting strategy: 
+ takes 3 groups of 3 elements (equidistant) and compute the median of each 
+ of the 3 group and then the median of the median
+*/
+static sort_key_t ninther(sort_key_t *data,
+                          size_t begin,
+                          size_t end)
+{
+    size_t n = end - begin;
 
-    while (1) {
+    size_t step = n / 8;
 
-        while (i <= j && arr[i] <= pivot) {
+    sort_key_t x0 = data[begin];
+    sort_key_t x1 = data[begin + step];
+    sort_key_t x2 = data[begin + 2 * step];
+
+    sort_key_t x3 = data[begin + 3 * step];
+    sort_key_t x4 = data[begin + 4 * step];
+    sort_key_t x5 = data[begin + 5 * step];
+
+    sort_key_t x6 = data[begin + 6 * step];
+    sort_key_t x7 = data[begin + 7 * step];
+    sort_key_t x8 = data[end - 1];
+
+    sort_key_t m0 = median3(x0, x1, x2);
+    sort_key_t m1 = median3(x3, x4, x5);
+    sort_key_t m2 = median3(x6, x7, x8);
+
+    return median3(m0, m1, m2);
+}
+
+/*
+  ITM (in the middle) Pivot
+*/
+static sort_key_t itm_pivot(sort_key_t *data,
+                          size_t begin,
+                          size_t end
+                        )
+{
+  size_t mid = (begin + end)/2;
+  return data[mid];
+}
+
+/*
+  MITM (median in the middle) Pivot.
+  Takes the 3 values at the middle of the array 
+  and returns the median.
+  If the data are uniformly distributed,
+  the 3 median of the 3 values is statistically a good estimate 
+  of the real median. 
+  Why the 3 central values?
+  Because they are fast to compute and live pretty near.
+*/
+static sort_key_t mitm_pivot(sort_key_t *data, 
+                              size_t begin,
+                              size_t end)
+{
+  if (end - begin < 3){
+    return data[(end+begin)/2];
+  }
+  size_t mid = (begin + end)/2;
+  size_t l_mid = mid-1;
+  size_t u_mid = mid+1;
+  return median3(data[l_mid], data[mid], data[u_mid]);
+}
+/*
+  3-WAY PARTITION
+  this is really usefull for array with duplicates
+ 
+  Partition arr[begin:end) into:
+
+    [begin, lt)   < pivot
+    [lt, gt)      == pivot
+    [gt, end)     > pivot
+ 
+  lt and gt are returned through the pointer arguments.
+ */
+static void partition_3way(sort_key_t *arr,
+                           size_t begin,
+                           size_t end,
+                           sort_key_t pivot,
+                           size_t *lt,
+                           size_t *gt)
+{
+    size_t low = begin;
+    size_t i = begin;
+    size_t high = end;
+
+    while (i < high) {
+
+        if (arr[i] < pivot) {
+
+            swap(&arr[low], &arr[i]);
+
+            ++low;
+            ++i;
+
+        } else if (arr[i] > pivot) {
+
+            high--;
+
+            swap(&arr[i], &arr[high]);
+
+        } else {
+
             i++;
         }
-
-        while (i <= j && arr[j] > pivot) {
-            j--;
-        }
-
-        if (i >= j) {
-            break;
-        }
-
-        swap(&arr[i], &arr[j]);
-        i++;
-        j--;
     }
 
-    swap(&arr[begin], &arr[j]);
-
-    return j;
+    *lt = low;
+    *gt = high;
 }
 
 /*
@@ -510,13 +627,22 @@ static void quick_sort_range(sort_key_t *data,
     if (end - begin <= 1) {
         return;
     }
-    // could be improved with a MoM strategy
-    size_t mid = begin + (end - begin) / 2;
-    swap(&data[begin], &data[mid]);
-    size_t pi = partition(data, begin, end);
+    if (end - begin <= INSERTION_SORT_CUTOFF){
+      insertion_sort_range(data, begin, end);
+      return;
+    }
 
-    quick_sort_range(data, begin, pi);
-    quick_sort_range(data, pi + 1, end);
+    // int use_itm = 0;
+
+    //sort_key_t pivot = (use_itm == 1) ? itm_pivot(data, begin, end) : ninther(data, begin, end);
+    sort_key_t pivot = mitm_pivot(data, begin, end);
+    size_t lt;
+    size_t gt;
+
+    partition_3way(data, begin, end, pivot, &lt, &gt);
+
+    quick_sort_range(data, begin, lt);
+    quick_sort_range(data, gt, end);
 }
 
 /*
@@ -534,16 +660,20 @@ static void quick_sort_omp_rec(sort_key_t *data,
         quick_sort_range(data, begin, end);
         return;
     }
-    // could be improved with a MoM strategy
-    size_t mid = begin + (end - begin) / 2;
-    swap(&data[begin], &data[mid]);
-    size_t pi = partition(data, begin, end);
+
+    // int use_itm = 1;
+
+    // sort_key_t pivot = (use_itm == 1) ? itm_pivot(data, begin, end) : ninther(data, begin, end);
+    sort_key_t pivot = mitm_pivot(data, begin, end);
+    size_t lt;
+    size_t gt;
+
+    partition_3way(data, begin, end, pivot, &lt, &gt);
 
     #pragma omp task
-    quick_sort_omp_rec(data, begin, pi);
+    quick_sort_omp_rec(data, begin, lt);
 
-    #pragma omp task // could we remove this since the father is just idle?
-    quick_sort_omp_rec(data, pi + 1, end);
+    quick_sort_omp_rec(data, gt, end);
 
     #pragma omp taskwait
 }
