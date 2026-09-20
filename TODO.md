@@ -16,6 +16,7 @@
 * [ ] Merging Algorithms comparison
 * [ ] Data Distribution comparison
 * [ ] Bandwidth achieved versus the Injection Rate of the network
+* [ ] Point-to-point instead of `MPI_Alltoallv`
 * [ ] Strong Scaling (fix $N$, vary $P$)
 * [ ] Weak Scaling (fix $N/P$, vary $P$)
 
