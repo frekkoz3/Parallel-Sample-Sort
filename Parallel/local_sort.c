@@ -756,8 +756,7 @@ void sort_rank(sort_key_t *keys,
         merge_sort_omp(keys, scratch, 0, nkeys);
     }
     else if (sort_algo == RADIX_SORT) {
-        radix_sort_omp(keys, scratch, 0, nkeys,
-                       (int)options->radix_bits);
+        radix_sort_omp(keys, scratch, 0, nkeys, (int)options->radix_bits);
     }
     else if (sort_algo == QUICK_SORT) {
         quick_sort_omp(keys, 0, nkeys);
