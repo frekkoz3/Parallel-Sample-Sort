@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH --partition=GENOA
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --account=dssc
-#SBATCH --ntasks-per-node=16
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=10G
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=60G
 #SBATCH --output=o.out
 #SBATCH --time=01:00:00
 
@@ -18,9 +18,11 @@ echo "directory:        $(pwd)"
 echo "date:             $(date)"
 echo "========================"
 
+module load mpi/latest
+
 make clean
 make
-make check
+make run
 
 echo "========================"
 echo "finished work"
