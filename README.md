@@ -62,7 +62,7 @@ quasi-balanced output, but the imbalance does not vanish. Measure max / min / me
 * The regular-sampling step picks $P^2$ samples globally. Why not pick $P$ or $P^3$? What is the role of the *oversampling* factor?
 * Why is `MPI_Alltoallv` typically much slower per byte than `MPI_Alltoall` for the same total data volume?
 * On a fat-tree network with $L$ levels, what is the lower bound on communication time for `MPI_Alltoall` of total volume $V$ per process? How close did you get?
-* What happens to your sort if you replace *MPI_Alltoallv* with $O(P^2)$ point-to-point messages? Predict and measure.
+* What happens to your sort if you replace `MPI_Alltoallv` with $O(P^2)$ point-to-point messages? Predict and measure.
 
 ---
 
