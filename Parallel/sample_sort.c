@@ -190,79 +190,139 @@ basic_iterative_k_way_merge_buckets ( sort_key_t    *keys,          // source so
     round 0:  (0,1), (2,3), (4,5), ...
     round 1:  (0..1,2..3), (4..5,6..7), ...
     round 2:  ...
-
-  The implementation uses a ping-pong strategy based on
-  the bucket and a temporary buffer between rounds
-  TO IMPROVE!!!
-  AND REWRITE SINCE IT DOES NOT FOLLOW THE CORRECT IMPLEMENTATION
 */
 static void
-binary_iterative_k_way_merge_buckets (  sort_key_t    *keys,          // source sorted chunks
+binary_iterative_k_way_merge_buckets ( sort_key_t    *keys,          // source sorted chunks
                                         size_t        *bounds,        // source/destination boundaries
                                         unsigned int   nchunks,       // number of incoming streams
                                         sort_key_t    *output        // full output array
                                       )
 {
-  size_t      *current;
-  size_t      *end;
-  unsigned int source;
-  unsigned int best_source;
-  int          have_best;
-  sort_key_t   best_key;
-  size_t       out;
-  size_t       total_keys;
+  if (nchunks == 0) return;
+  
+  size_t total_keys = bounds[nchunks];
+  if (total_keys == 0) return;
 
-  current = malloc_array ((size_t) nchunks, sizeof (size_t));
-  end = malloc_array ((size_t) nchunks, sizeof (size_t));
-
-  for (source = 0; source < nchunks; source++)
+  if (nchunks == 1)
     {
-      current[source] = bounds[source];
-      end[source] = bounds[source + 1];
+      memcpy (output, keys, total_keys * sizeof (sort_key_t));
+      return;
     }
 
-  total_keys = bounds[nchunks];
-  out = 0;
+  // Allocate working buffer and stream boundaries for ping-pong rounds
+  sort_key_t *scratch = malloc_array (total_keys, sizeof (sort_key_t));
+  size_t     *cur_bounds = malloc_array ((size_t) nchunks + 1, sizeof (size_t));
+  size_t     *next_bounds = malloc_array ((size_t) nchunks + 1, sizeof (size_t));
 
-  while (out < total_keys)
+  memcpy (cur_bounds, bounds, (nchunks + 1) * sizeof (size_t));
+
+  sort_key_t *src_buf = keys;
+  sort_key_t *dst_buf = scratch;
+  unsigned int active_chunks = nchunks;
+
+  while (active_chunks > 1)
     {
-      have_best = 0;
-      best_source = 0;
-      best_key = 0;
+      unsigned int next_chunks = (active_chunks + 1) / 2;
+      next_bounds[0] = 0;
 
-      for (source = 0; source < nchunks; source++)
+      for (unsigned int i = 0; i < active_chunks; i += 2)
         {
-          if (current[source] < end[source])
+          unsigned int out_idx = i / 2;
+
+          if (i + 1 < active_chunks)
             {
-              if (!have_best || keys[current[source]] < best_key)
+              // 2-way merge of stream i and stream i+1
+              size_t p1 = cur_bounds[i];
+              size_t end1 = cur_bounds[i + 1];
+              size_t p2 = cur_bounds[i + 1];
+              size_t end2 = cur_bounds[i + 2];
+              size_t out_pos = next_bounds[out_idx];
+
+              while (p1 < end1 && p2 < end2)
                 {
-                  have_best = 1;
-                  best_source = source;
-                  best_key = keys[current[source]];
+                  if (src_buf[p1] <= src_buf[p2])
+                    dst_buf[out_pos++] = src_buf[p1++];
+                  else
+                    dst_buf[out_pos++] = src_buf[p2++];
                 }
+              while (p1 < end1) dst_buf[out_pos++] = src_buf[p1++];
+              while (p2 < end2) dst_buf[out_pos++] = src_buf[p2++];
+
+              next_bounds[out_idx + 1] = out_pos;
+            }
+          else
+            {
+              // Odd chunk out: direct copy to destination
+              size_t p1 = cur_bounds[i];
+              size_t end1 = cur_bounds[i + 1];
+              size_t out_pos = next_bounds[out_idx];
+              size_t len = end1 - p1;
+
+              memcpy (&dst_buf[out_pos], &src_buf[p1], len * sizeof (sort_key_t));
+              next_bounds[out_idx + 1] = out_pos + len;
             }
         }
 
-      if (!have_best)
-        {
-          fprintf (stderr, "Internal error during k-way merge\n");
-          free (current);
-          free (end);
-          exit (EXIT_FAILURE);
-        }
+      // Prepare for next pass
+      active_chunks = next_chunks;
+      memcpy (cur_bounds, next_bounds, (active_chunks + 1) * sizeof (size_t));
 
-      output[out++] = best_key;
-      current[best_source] += 1;
+      // Ping-pong buffers
+      src_buf = dst_buf;
+      dst_buf = (src_buf == scratch) ? output : scratch;
     }
 
-  free (current);
-  free (end);
+  // If the final result ended up in scratch, copy it to output
+  if (src_buf != output)
+    {
+      memcpy (output, scratch, total_keys * sizeof (sort_key_t));
+    }
+
+  free (scratch);
+  free (cur_bounds);
+  free (next_bounds);
 }
 
 /*
   Heap direct K-way merge.
-  TO IMPLEMENT!!!
+  We store a min-heap containing the minimum from each chunk.
+  We exctract the minimum from the heap. This minimum belong to a certain chunk, 
+  so we then proceed to add the following minimum of that chunk to the heap.
 */
+typedef struct {
+  sort_key_t   key;
+  unsigned int source;
+} heap_node_t;
+
+static void
+sift_down_heap (heap_node_t *heap, size_t size, size_t idx)
+{
+  size_t min_idx = idx;
+
+  while (1)
+    {
+      size_t left  = 2 * idx + 1;
+      size_t right = 2 * idx + 2;
+
+      if (left < size && heap[left].key < heap[min_idx].key)
+        min_idx = left;
+      if (right < size && heap[right].key < heap[min_idx].key)
+        min_idx = right;
+
+      if (min_idx != idx)
+        {
+          heap_node_t tmp = heap[idx];
+          heap[idx]       = heap[min_idx];
+          heap[min_idx]   = tmp;
+          idx             = min_idx;
+        }
+      else
+        {
+          break;
+        }
+    }
+}
+
 static void
 heap_direct_k_way_merge_buckets ( sort_key_t    *keys,          // source sorted chunks
                                   size_t        *bounds,        // source/destination boundaries
@@ -270,127 +330,53 @@ heap_direct_k_way_merge_buckets ( sort_key_t    *keys,          // source sorted
                                   sort_key_t    *output         // full output array
                                 )
 {
-  size_t      *current;
-  size_t      *end;
-  unsigned int source;
-  unsigned int best_source;
-  int          have_best;
-  sort_key_t   best_key;
-  size_t       out;
-  size_t       total_keys;
+  if (nchunks == 0) return;
 
-  current = malloc_array ((size_t) nchunks, sizeof (size_t));
-  end = malloc_array ((size_t) nchunks, sizeof (size_t));
+  size_t      *current = malloc_array ((size_t) nchunks, sizeof (size_t));
+  heap_node_t *heap    = malloc_array ((size_t) nchunks, sizeof (heap_node_t));
+  size_t       heap_size = 0;
+  size_t       out = 0;
 
-  for (source = 0; source < nchunks; source++)
+  for (unsigned int s = 0; s < nchunks; s++)
     {
-      current[source] = bounds[source];
-      end[source] = bounds[source + 1];
+      current[s] = bounds[s];
+      if (current[s] < bounds[s + 1])
+        {
+          heap[heap_size].key    = keys[current[s]++];
+          heap[heap_size].source = s;
+          heap_size++;
+        }
     }
 
-  total_keys = bounds[nchunks];
-  out = 0;
-
-  while (out < total_keys)
+  // Build min-heap
+  if (heap_size > 0)
     {
-      have_best = 0;
-      best_source = 0;
-      best_key = 0;
+      for (int i = (int)(heap_size / 2) - 1; i >= 0; i--)
+        sift_down_heap (heap, heap_size, (size_t) i);
+    }
 
-      for (source = 0; source < nchunks; source++)
+  // Extract min and push next element from the same stream
+  while (heap_size > 0)
+    {
+      output[out++] = heap[0].key;
+      unsigned int src = heap[0].source;
+
+      if (current[src] < bounds[src + 1])
         {
-          if (current[source] < end[source])
-            {
-              if (!have_best || keys[current[source]] < best_key)
-                {
-                  have_best = 1;
-                  best_source = source;
-                  best_key = keys[current[source]];
-                }
-            }
+          heap[0].key = keys[current[src]++];
+          sift_down_heap (heap, heap_size, 0);
         }
-
-      if (!have_best)
+      else
         {
-          fprintf (stderr, "Internal error during k-way merge\n");
-          free (current);
-          free (end);
-          exit (EXIT_FAILURE);
+          heap[0] = heap[heap_size - 1];
+          heap_size--;
+          if (heap_size > 0)
+            sift_down_heap (heap, heap_size, 0);
         }
-
-      output[out++] = best_key;
-      current[best_source] += 1;
     }
 
   free (current);
-  free (end);
-}
-
-/*
-  Tournament tree direct K-way merge.
-  TO IMPLEMENT!!!
-*/
-static void
-tournament_tree_direct_k_way_merge_buckets (  sort_key_t    *keys,          // source sorted chunks
-                                              size_t        *bounds,        // source/destination boundaries
-                                              unsigned int   nchunks,       // number of incoming streams
-                                              sort_key_t    *output        // full output array
-			                                      )
-{
-  size_t      *current;
-  size_t      *end;
-  unsigned int source;
-  unsigned int best_source;
-  int          have_best;
-  sort_key_t   best_key;
-  size_t       out;
-  size_t       total_keys;
-
-  current = malloc_array ((size_t) nchunks, sizeof (size_t));
-  end = malloc_array ((size_t) nchunks, sizeof (size_t));
-
-  for (source = 0; source < nchunks; source++)
-    {
-      current[source] = bounds[source];
-      end[source] = bounds[source + 1];
-    }
-
-  total_keys = bounds[nchunks];
-  out = 0;
-
-  while (out < total_keys)
-    {
-      have_best = 0;
-      best_source = 0;
-      best_key = 0;
-
-      for (source = 0; source < nchunks; source++)
-        {
-          if (current[source] < end[source])
-            {
-              if (!have_best || keys[current[source]] < best_key)
-                {
-                  have_best = 1;
-                  best_source = source;
-                  best_key = keys[current[source]];
-                }
-            }
-        }
-
-      if (!have_best)
-        {
-          fprintf (stderr, "Internal error during k-way merge\n");
-          free (current);
-          free (end);
-          exit (EXIT_FAILURE);
-        }
-
-      output[out++] = best_key;
-      current[best_source] += 1;
-    }
-
-  free (current);
-  free (end);
+  free (heap);
 }
 
 /*
@@ -417,9 +403,6 @@ merge_local_destination_buckets( sort_key_t        *keys,                // sort
   }
   else if (merging_strat == HEAP_DIRECT_KWM) {
     heap_direct_k_way_merge_buckets (keys, local_bounds, nchunks, output);
-  }
-  else if (merging_strat == TORUNAMENT_TREE_DIRECT_KWM) {
-    tournament_tree_direct_k_way_merge_buckets (keys, local_bounds, nchunks, output);
   }
 }
 
