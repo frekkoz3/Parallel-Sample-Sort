@@ -1,6 +1,6 @@
 # Hybrid MPI + OpenMP Compiler Setup
 CC      = mpicc
-CFLAGS  ?= -std=c11 -g -O0 -Wall -Wextra -pedantic -fopenmp
+CFLAGS  ?= -std=c11 -O3 -Wall -Wextra -pedantic -fopenmp
 LDFLAGS ?=
 LDLIBS  ?= -fopenmp
 BITSIZE ?= #-DUSE_UINT32 # Un-comment for 32-bit keys
