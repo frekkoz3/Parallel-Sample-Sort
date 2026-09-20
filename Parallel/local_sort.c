@@ -4,6 +4,18 @@
 #include <stdio.h> // debug
 #include <omp.h>
 
+/*
+  Helper to swap two elements
+*/
+static void swap(sort_key_t *a,
+                 sort_key_t *b
+                )
+{
+    sort_key_t temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
 /* 
    : ------------------------------------------------------ :
    : INSERTION SORT                                         :
@@ -20,7 +32,7 @@ void insertion_sort_range(  sort_key_t *data,      // array containing the range
   for (int i = (int)(begin + 1); i < (int)end; i++){
     temp = data[i];
     j = i - 1;
-    while(j >= 0 && data[j] > temp){
+    while(j >= (int)begin && data[j] > temp){
       data[j+1] = data[j];
       j--;
     }
@@ -88,14 +100,13 @@ merge_runs ( sort_key_t *data,       // array containing the input runs
   i = left;
   j = middle;
   k = left;
-
-  while (i < middle && j < right)
-    {
-      if (data[i] <= data[j])
-        scratch[k++] = data[i++];
-      else
-        scratch[k++] = data[j++];
-    }
+  // branchless version
+  while (i < middle && j < right) {
+    int cmp = data[i] <= data[j];
+    scratch[k++] = cmp ? data[i] : data[j];
+    i += cmp;
+    j += !cmp;
+  }
 
   while (i < middle)
     scratch[k++] = data[i++];
@@ -466,18 +477,6 @@ void radix_sort_omp(sort_key_t *data,
             free(bucket_base);
         }
     }
-}
-
-/*
-  Helper to swap two elements
-*/
-static void swap(sort_key_t *a,
-                 sort_key_t *b
-                )
-{
-    sort_key_t temp = *a;
-    *a = *b;
-    *b = temp;
 }
 
 /* 
