@@ -325,15 +325,14 @@ void radix_sort_omp(sort_key_t *data,
         int tid = omp_get_thread_num();
         int nthreads = omp_get_num_threads();
 
-        /*
-         * Private per-thread arrays.
-         */
+        
+        // private per-thread arrays
         size_t local_count[n_buckets];
         size_t local_offset[n_buckets];
 
-        /*
-         * Allocate shared structures once.
-         */
+        
+        
+        // allocate shared structures once
         #pragma omp single
         {
             Gl = (size_t **)malloc(nthreads * sizeof(size_t *));
@@ -343,7 +342,7 @@ void radix_sort_omp(sort_key_t *data,
                                64,
                                n_buckets * sizeof(size_t));
             }
-
+            // alignment for cache friendly behavior
             posix_memalign((void **)&bucket_base,
                            64,
                            n_buckets * sizeof(size_t));
@@ -351,15 +350,10 @@ void radix_sort_omp(sort_key_t *data,
 
         #pragma omp barrier
         
-        /*
-         * Count Sort
-        */
+        // count sort
         for (int dig = 0; dig < total_digits; dig++) {
 
-            /*
-             * Local histograms
-             */
-
+            // local histogram
             memset(local_count,
                    0,
                    n_buckets * sizeof(size_t));
@@ -376,10 +370,7 @@ void radix_sort_omp(sort_key_t *data,
                 local_count[bucket]++;
             }
 
-            /*
-             * Local histograms to Global
-             */
-
+            // local histogram to global
             for (int b = 0; b < n_buckets; b++) {
                 Gl[tid][b] = local_count[b];
             }
@@ -410,10 +401,8 @@ void radix_sort_omp(sort_key_t *data,
 
             #pragma omp barrier
 
-            /*
-             * Compute this thread's starting offset
-             * inside every bucket.
-             */
+            // compute this thread's starting offset
+            //inside every bucket.
 
             for (int b = 0; b < n_buckets; b++) {
 
@@ -426,9 +415,7 @@ void radix_sort_omp(sort_key_t *data,
                 local_offset[b] = offset;
             }
 
-            /*
-             * Scatter
-             */
+            // scatter
 
             #pragma omp for schedule(static)
             for (size_t i = 0; i < n; i++) {
@@ -442,9 +429,7 @@ void radix_sort_omp(sort_key_t *data,
                 dst[local_offset[bucket]++] = src[i];
             }
 
-            /*
-             * Ping-pong buffers
-             */
+            // ping pong buffer
 
             #pragma omp single
             {
@@ -457,10 +442,9 @@ void radix_sort_omp(sort_key_t *data,
         }
 
         
-        /*
-         * This is done to ensure the results are in src
-         * (Could not be the case for the pingpong style)
-        */
+        
+        // This is done to ensure the results are in src
+        // (Could not be the case for the pingpong style)
         #pragma omp single
         {
             if (src != data + begin) {
@@ -672,10 +656,22 @@ static void quick_sort_omp_rec(sort_key_t *data,
         return;
     }
 
-    // int use_itm = 1;
+    int use_mitm = 1;
+    int use_itm = 0;
+    sort_key_t pivot;
 
-    // sort_key_t pivot = (use_itm == 1) ? itm_pivot(data, begin, end) : ninther(data, begin, end);
-    sort_key_t pivot = mitm_pivot(data, begin, end);
+    if (use_mitm == 1){
+      pivot = mitm_pivot(data, begin, end);
+    }
+    else if (use_itm == 1)
+    {
+      pivot = itm_pivot(data, begin, end);
+    }
+    else 
+    {
+      pivot = ninther(data, begin, end);
+    }
+
     size_t lt;
     size_t gt;
 
@@ -695,7 +691,8 @@ static void quick_sort_omp_rec(sort_key_t *data,
 void quick_sort_omp(sort_key_t *data,
                     size_t begin,
                     size_t end)
-{
+{   
+  
     #pragma omp parallel
     {
         #pragma omp single
