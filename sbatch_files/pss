@@ -18,6 +18,9 @@ echo "directory:        $(pwd)"
 echo "date:             $(date)"
 echo "========================"
 
+cd
+cd uni/Parallel-Sample-Sort/Parallel/
+
 module load mpi/latest
 
 make clean
