@@ -1077,8 +1077,8 @@ compute_signature ( sort_key_t   *keys,    // array to inspect
       mixed = mix_key (keys[i]);
       sig.sum += mixed;
       sig.xor_value ^= mixed;
+      
     }
-
   return sig;
 }
 

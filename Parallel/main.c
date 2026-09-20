@@ -114,6 +114,7 @@ int main (int argc, char **argv) {
     MPI_Finalize();
     return EXIT_FAILURE;
   }
+  options.seed += rank; // in this way each rank has different data
 
   memset (&timing, 0, sizeof (timing));
 
