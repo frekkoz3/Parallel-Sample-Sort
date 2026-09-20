@@ -631,10 +631,22 @@ static void quick_sort_range(sort_key_t *data,
       return;
     }
 
-    // int use_itm = 0;
+    int use_mitm = 1;
+    int use_itm = 0;
+    sort_key_t pivot;
 
-    //sort_key_t pivot = (use_itm == 1) ? itm_pivot(data, begin, end) : ninther(data, begin, end);
-    sort_key_t pivot = mitm_pivot(data, begin, end);
+    if (use_mitm == 1){
+      pivot = mitm_pivot(data, begin, end);
+    }
+    else if (use_itm == 1)
+    {
+      pivot = itm_pivot(data, begin, end);
+    }
+    else 
+    {
+      pivot = ninther(data, begin, end);
+    }
+    
     size_t lt;
     size_t gt;
 

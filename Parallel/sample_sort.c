@@ -446,7 +446,7 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   free (scratch);
 
   if (options->nbuckets == 1) { // remember n_buckets = number of mpi ranks!
-    memcpy (*output, keys, nkeys * sizeof (sort_key_t));
+    *output = keys;
     timing->sampling = timing->partitioning = timing->merging = 0.0;
     return;
   }

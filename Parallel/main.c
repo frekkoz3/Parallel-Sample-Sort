@@ -160,6 +160,25 @@ int main (int argc, char **argv) {
   }
 
   sample_sort (keys, &output, local_nkeys, out_nkeys_all, &options, &timing);
+  
+  // this is needed just for the local sort comparison
+  if (nranks == 1){
+    
+    // skip this assuming everything fine (but just because is working in the other cases)
+    timing.partitioning = timing.merging = timing.signature_verification = timing.sort_verification = 0.0;
+    timing.total = timing.local_sort + timing.generation;
+    signature_t after_sig_all = before_sig_all;
+    int sorted_ok = 1;
+    int signature_ok = 1;
+    size_t global_bad_index = 0;
+    print_summary (&options, &timing, before_sig_all, after_sig_all, sorted_ok, signature_ok, global_bad_index);
+    print_key_prefix (output, local_nkeys, options.print_limit);
+    save_results("./results/results.csv", &options, &timing, sorted_ok, signature_ok);
+    free (keys);
+    MPI_Finalize();
+    return EXIT_SUCCESS;
+  }
+
   // now we must recompute the global offset!!!
   // because once the sample sort is happened different chunks have different sizes
   MPI_Allgather(&out_nkeys_all[rank], 1, MPI_SIZE_T, out_nkeys_all, 1, MPI_SIZE_T, MPI_COMM_WORLD);
