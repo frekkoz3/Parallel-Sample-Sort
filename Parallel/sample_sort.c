@@ -460,13 +460,15 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   t1 = MPI_Wtime();
   timing->local_sort = t1 - t0;
 
+  free (scratch);
+
   if (options->nbuckets == 1) { // remember n_buckets = number of mpi ranks!
     memcpy (*output, keys, nkeys * sizeof (sort_key_t));
-    free (scratch);
     timing->sampling = timing->partitioning = timing->merging = 0.0;
     return;
   }
 
+  
   // ··············································
   // sample
 
@@ -509,6 +511,8 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
     choose_global_pivots (samples, samples_per_chunk, options->nbuckets, pivots);
   }
 
+  free (samples);
+
   // finally we send the pivots to all the ranks
   MPI_Bcast(pivots, (options->nbuckets - 1), MPI_SORT_KEY_T, 0, MPI_COMM_WORLD);
 
@@ -535,6 +539,8 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   timing->partitioning = t1 - t0;
   // A parallel step is only as fast as its slowest process.
   MPI_Reduce(&timing->partitioning, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  
+  free (pivots);
 
   if (rank == 0) {
       timing->partitioning = t_max_elapsed;
@@ -566,6 +572,8 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
 
       send_offset[i] = (int)bounds[i];
   }
+
+  free (bounds);
 
   // now w find out how many keys we receive from each rank
   MPI_Alltoall(send_counts, 1, MPI_INT, recv_counts, 1, MPI_INT, MPI_COMM_WORLD);
@@ -621,9 +629,5 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   free (recv_counts);
   free (recv_offset);
   free (recv_buffer);
-  free (bounds);
   free (local_bounds);
-  free (pivots);
-  free (samples);
-  free (scratch);
 }
