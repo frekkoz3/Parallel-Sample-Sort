@@ -25,7 +25,7 @@ $(TARGET): $(OBJS)
 
 run: $(TARGET)
 	OMP_NUM_THREADS=$(THREADS) mpirun -np $(RANKS) ./$(TARGET) \
-		--n 10000000 \
+		--n 1000000000 \
 		--distribution uniform \
 		--merging_strat basic \
 		--sorting radix 
