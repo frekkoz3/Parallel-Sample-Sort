@@ -12,7 +12,7 @@
 #define DEFAULT_OVERSAMPLE     (1ULL)
 #define DEFAULT_SEED           (1ULL)
 #define DEFAULT_DISTRIBUTION   "uniform"
-#define DEFAULT_SORT           "merge"
+#define DEFAULT_SORT           "radix"
 #define DEFAULT_MERGING_STRAT  "bin"
 #define DEFAULT_RADIX_BITS     (8u)
 #define DEFAULT_PRINT_LIMIT    (0ULL)
