@@ -3,7 +3,7 @@
 #SBATCH --partition=GENOA
 #SBATCH --nodes=2
 #SBATCH --account=dssc
-#SBATCH --ntasks-per-node=64
+#SBATCH --ntasks-per-node=32
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=30G
 #SBATCH --output=merging_comparison.out
