@@ -1,0 +1,33 @@
+#!/bin/bash
+
+#SBATCH --partition=GENOA
+#SBATCH --nodes=2
+#SBATCH --account=dssc
+#SBATCH --ntasks-per-node=32
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=500G
+#SBATCH --output=skewed_input.out
+#SBATCH --time=01:00:00
+
+$SLURM_JOB_ID
+
+echo "========================"
+echo "running on:       $(hostname)"
+echo "job_id            $SLURM_JOB_ID"
+echo "directory:        $(pwd)"
+echo "date:             $(date)"
+echo "========================"
+
+cd
+cd uni/Parallel-Sample-Sort/Parallel/
+
+module load mpi/latest
+
+make clean
+make
+make skewed_input
+
+echo "========================"
+echo "finished work"
+echo "finish date:      $(date)"
+echo "========================"

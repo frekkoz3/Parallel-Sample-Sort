@@ -32,17 +32,17 @@ run: $(TARGET)
 
 sorting_comparison: $(TARGET)
 	@echo "Running comparison of local sorting algorithm"
-	@for number in 1 2 4 8 16; do \
-		OMP_NUM_THREADS=$$number mpirun -np 1 ./$(TARGET) --n 50000000 --sorting radix; \
-		OMP_NUM_THREADS=$$number mpirun -np 1 ./$(TARGET) --n 50000000 --sorting quick; \
+	@for number in 1 2 4 8 16 32 64; do \
+		OMP_NUM_THREADS=$$number mpirun -np 1 ./$(TARGET) --n 50000000 --sorting radix --where_save ./results/sorting_comparison.csv; \
+		OMP_NUM_THREADS=$$number mpirun -np 1 ./$(TARGET) --n 50000000 --sorting quick --where_save ./results/sorting_comparison.csv; \
 	done
 
 merging_comparison: $(TARGET)
 	@echo "Running comparison of merging strategy"
 	@for number in 4 8 16 32 64; do \
-		OMP_NUM_THREADS=8 mpirun -np $$number ./$(TARGET) --n 50000000 --merging_strat basic; \
-		OMP_NUM_THREADS=8 mpirun -np $$number ./$(TARGET) --n 50000000 --merging_strat bin; \
-		OMP_NUM_THREADS=8 mpirun -np $$number ./$(TARGET) --n 50000000 --merging_strat heap; \
+		OMP_NUM_THREADS=2 mpirun -np $$number ./$(TARGET) --n 50000000 --merging_strat basic --where_save ./results/merging_comparison.csv; \
+		OMP_NUM_THREADS=2 mpirun -np $$number ./$(TARGET) --n 50000000 --merging_strat bin   --where_save ./results/merging_comparison.csv; \
+		OMP_NUM_THREADS=2 mpirun -np $$number ./$(TARGET) --n 50000000 --merging_strat heap  --where_save ./results/merging_comparison.csv; \
 	done
 
 oversampling_tuning: $(TARGET)
@@ -51,20 +51,20 @@ oversampling_tuning: $(TARGET)
 strong_scaling: $(TARGET)
 	@echo "Running strong scaling experiment"
 	@for number in 4 8 16 32 64; do \
-		OMP_NUM_THREADS=8 mpirun -np $$number ./$(TARGET) --n 1000000000 --merging_strat basic; \
+		OMP_NUM_THREADS=4 mpirun -np $$number ./$(TARGET) --n 1000000000 --where_save ./results/strong_scaling.csv; \
 	done
 
 weak_scaling: $(TARGET)
 	@echo "Running weak scaling experiment"
 	@for number in 4 8 16 32; do \
 		N=$$((20000000 * number)); \
-		OMP_NUM_THREADS=8 mpirun -np $$number ./$(TARGET) --n $$N; \
+		OMP_NUM_THREADS=4 mpirun -np $$number ./$(TARGET) --n $$N  --where_save ./results/weak_scaling.csv; \
 	done
 
 skewed_input: $(TARGET)
 	@echo "Running skewed input experiment"
 	@for number in 8 16 32; do \
-		OMP_NUM_THREADS=8 mpirun -np $$number ./$(TARGET) --n 100000000 --distribution skewed; \
+		OMP_NUM_THREADS=4 mpirun -np $$number ./$(TARGET) --n 100000000 --distribution skewed  --where_save ./results/skewed_input.csv; \
 	done
 
 clean:
