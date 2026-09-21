@@ -16,6 +16,7 @@
 #define DEFAULT_MERGING_STRAT  "bin"
 #define DEFAULT_RADIX_BITS     (8u)
 #define DEFAULT_PRINT_LIMIT    (0ULL)
+#define DEFAULT_WHERE_SAVE     "./results/results.csv"
 
 // Compute the size_t equivalent for MPI
 // this is needed for the bad_index
@@ -86,6 +87,7 @@ typedef struct {
   int               radix_bits;
   merging_strategy  merging;
   char             *merging_name;
+  char             *where_save;
   size_t            print_limit;
 } options_t;
 

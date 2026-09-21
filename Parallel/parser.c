@@ -29,11 +29,12 @@ print_usage ( char     *program_name   // executable name from argv[0]
            "  --sorting NAME         merge | quick | radix (%s)\n"
            "  --radix_bits VALUE     digit size for radix sort (%d)\n"
            "  --merging_strat NAME   final merging strategy basic | bin | heap (%s)\n"
+           "  --where_save PATH      path to the output path (%s)\n"
            "  --print-limit VALUE    print the first VALUE sorted keys           (%llu)\n"
            "  --help                 show this help message\n\n",
            program_name, (unsigned long long) DEFAULT_NKEYS,
            (unsigned long long) DEFAULT_OVERSAMPLE, (unsigned long long) DEFAULT_SEED,
-           DEFAULT_DISTRIBUTION, DEFAULT_SORT, DEFAULT_RADIX_BITS, DEFAULT_MERGING_STRAT ,(unsigned long long) DEFAULT_PRINT_LIMIT);
+           DEFAULT_DISTRIBUTION, DEFAULT_SORT, DEFAULT_RADIX_BITS, DEFAULT_MERGING_STRAT , DEFAULT_WHERE_SAVE, (unsigned long long) DEFAULT_PRINT_LIMIT);
 }
 
 /*
@@ -54,6 +55,7 @@ set_default_options ( options_t   *options   // output options structure
   options->radix_bits        = DEFAULT_RADIX_BITS;
   options->merging           = BASIC_ITERATIVE_KWM;
   options->merging_name      = DEFAULT_MERGING_STRAT;
+  options->where_save        = DEFAULT_WHERE_SAVE;
   options->print_limit       = (size_t) DEFAULT_PRINT_LIMIT;
 } // the nbuckets are handled in the main
 
@@ -185,21 +187,40 @@ parse_u64_option ( int        argc,    // number of command-line tokens
   Parse an unsigned integer option into uint64_t.
 */
 static int
-parse_int_option ( int        argc,    // number of command-line tokens
-                   char     **argv,    // command-line token vector
-                   int       *i,       // index of the option being parsed
-                   int       *value    // parsed output value
-		   ) {
+parse_int_option ( int    argc,
+                   char **argv,
+                   int   *i,
+                   int   *value )
+{
   char *endptr;
-  if (*i + 1 >= argc) { fprintf (stderr, "Missing value after %s\n", argv[*i]); return -1; }
-  errno = 0; endptr = NULL;
-  unsigned long long parsed = strtoull (argv[*i + 1], &endptr, 10);
-  if (errno != 0 || endptr == argv[*i + 1] || *endptr != '\0') {
-    fprintf (stderr, "Invalid integer for %s: %s\n", argv[*i], argv[*i + 1]);
+
+  if (*i + 1 >= argc) {
+    fprintf(stderr, "Missing value after %s\n", argv[*i]);
     return -1;
   }
+
+  errno = 0;
+  endptr = NULL;
+
+  long parsed = strtol(argv[*i + 1], &endptr, 10);
+
+  if (errno != 0 ||
+      endptr == argv[*i + 1] ||
+      *endptr != '\0') {
+    fprintf(stderr, "Invalid integer for %s: %s\n",
+            argv[*i], argv[*i + 1]);
+    return -1;
+  }
+
+  if (parsed < INT_MIN || parsed > INT_MAX) {
+    fprintf(stderr, "Integer out of range for %s: %s\n",
+            argv[*i], argv[*i + 1]);
+    return -1;
+  }
+
   *value = (int) parsed;
   *i += 1;
+
   return 0;
 }
 
@@ -236,6 +257,14 @@ parse_options ( int          argc,      // number of command-line tokens
       if (parse_merging_name (argv[i + 1], &options->merging) != 0) return -1;
       options->merging_name = argv[i + 1]; i++;
     }
+    else if (strcmp (argv[i], "--where_save") == 0){
+      if (i + 1 >= argc) {
+        fprintf(stderr, "Missing value after %s\n", argv[i]);
+        return -1;
+      }
+      options->where_save = argv[i + 1];
+      i++;
+    }
     else if (strcmp (argv[i], "--print-limit") == 0) { if (parse_size_option (argc, argv, &i, &options->print_limit) != 0) return -1; }
     else { fprintf (stderr, "Unknown option: %s\n", argv[i]); print_usage (argv[0]); return -1; }
   }
@@ -253,6 +282,7 @@ validate_options ( options_t   *options   // parsed options to validate
 {
   if (options->nkeys == 0 || options->nbuckets == 0 || options->oversample == 0) return -1;
   if ((size_t) options->nbuckets > options->nkeys) return -1;
+  if (options->radix_bits <= 0) return -1; // must be > 0
   if ((size_t) options->radix_bits > N_BITS) return -1; // maximum number of digits < N_BITS
   if (N_BITS % (size_t) options->radix_bits != 0) return -1; // the radix_bits must be a divisor of N_BITS
   if (options->nbuckets > 1) {

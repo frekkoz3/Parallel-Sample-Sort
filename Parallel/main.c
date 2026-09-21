@@ -41,9 +41,9 @@ static void print_summary (options_t *options, timing_t *timing, signature_t bef
 
 // utility to save results
 // the results will be later used on python side for analysis and visualization purposes
-static void save_results(char *where_save, options_t *options, timing_t *timing, int sorted_ok, int signature_ok){
+static void save_results(options_t *options, timing_t *timing, int sorted_ok, int signature_ok){
 
-  FILE *file = fopen(where_save, "a+");
+  FILE *file = fopen(options->where_save, "a+");
    if (file == NULL) {
         perror("fopen");
   }
@@ -173,7 +173,7 @@ int main (int argc, char **argv) {
     size_t global_bad_index = 0;
     print_summary (&options, &timing, before_sig_all, after_sig_all, sorted_ok, signature_ok, global_bad_index);
     print_key_prefix (output, local_nkeys, options.print_limit);
-    save_results("./results/results.csv", &options, &timing, sorted_ok, signature_ok);
+    save_results(&options, &timing, sorted_ok, signature_ok);
     free (keys);
     MPI_Finalize();
     return EXIT_SUCCESS;
@@ -254,7 +254,7 @@ int main (int argc, char **argv) {
   if (rank == 0){
     print_summary (&options, &timing, before_sig_all, after_sig_all, sorted_ok, signature_ok, global_bad_index);
     print_key_prefix (output, out_nkeys, options.print_limit);
-    save_results("./results/results.csv", &options, &timing, sorted_ok, signature_ok);
+    save_results(&options, &timing, sorted_ok, signature_ok);
   }
 
   free (output);
