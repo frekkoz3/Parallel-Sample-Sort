@@ -32,7 +32,6 @@ make strong_scaling
 make strong_scaling
 make strong_scaling
 make strong_scaling
-make strong_scaling
 
 echo "========================"
 echo "finished work"

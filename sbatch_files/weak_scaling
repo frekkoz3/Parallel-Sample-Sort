@@ -32,7 +32,6 @@ make weak_scaling
 make weak_scaling
 make weak_scaling
 make weak_scaling
-make weak_scaling
 
 echo "========================"
 echo "finished work"

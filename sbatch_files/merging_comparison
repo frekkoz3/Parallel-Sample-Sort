@@ -32,7 +32,6 @@ make merging_comparison
 make merging_comparison
 make merging_comparison
 make merging_comparison
-make merging_comparison
 
 echo "========================"
 echo "finished work"
