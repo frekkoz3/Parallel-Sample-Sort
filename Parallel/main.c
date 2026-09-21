@@ -181,7 +181,15 @@ int main (int argc, char **argv) {
 
   // now we must recompute the global offset!!!
   // because once the sample sort is happened different chunks have different sizes
-  MPI_Allgather(&out_nkeys_all[rank], 1, MPI_SIZE_T, out_nkeys_all, 1, MPI_SIZE_T, MPI_COMM_WORLD);
+  MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, out_nkeys_all, 1, MPI_SIZE_T, MPI_COMM_WORLD);
+  // MPI_Allgather(&out_nkeys_all[rank], 1, MPI_SIZE_T, out_nkeys_all, 1, MPI_SIZE_T, MPI_COMM_WORLD);
+  // why not this? why MPI_IN_PLACE? without it, it throw "Fatal error in internal_Allgather: Buffers must not be aliased".
+  // this is caused by the fact that out_nkeys_all is passed as the receiving buffer (recvbuf),
+  // while &out_nkeys_all[rank] is passed as the sending buffer (sendbuf). This is strictly forbidden
+  // in MPI standard. (sendbuf and recvbuf cannot point to overlapping memory regions in standard collective calls)
+  // MPI_IN_PLACE exactly permit to do the opposite. Why is it safe to do it?
+  // in this case the index that could produce a data race are already safe.
+  
   size_t global_offset = 0;
   for (int r = 0; r < rank; r++)
     global_offset += out_nkeys_all[r];

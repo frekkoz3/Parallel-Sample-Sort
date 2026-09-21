@@ -10,8 +10,8 @@ SRCS    = main.c parser.c utils.c local_sort.c sample_sort.c
 OBJS    = $(SRCS:.c=.o)
 
 # Default parallel dimensions
-RANKS   ?= 2
-THREADS ?= 8
+RANKS   ?= 4
+THREADS ?= 4
 
 .PHONY: all clean run check
 
@@ -24,11 +24,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(BITSIZE) -c $< -o $@
 
 run: $(TARGET)
-	OMP_NUM_THREADS=$(THREADS) mpirun -np $(RANKS) ./$(TARGET) \
-		--n 100000000 \
-		--distribution uniform \
-		--merging_strat basic \
-		--sorting merge
+	OMP_NUM_THREADS=$(THREADS) mpirun -np $(RANKS) ./$(TARGET) --n 100000000
 
 sorting_comparison: $(TARGET)
 	@echo "Running comparison of local sorting algorithm"
