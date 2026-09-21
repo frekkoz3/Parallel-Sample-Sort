@@ -4,3 +4,4 @@ Parallel/sample_sort_omp
 *.o
 o.out
 Parallel/sample_sort_mpi
+*.out
