@@ -9,8 +9,6 @@
 #SBATCH --output=o.out
 #SBATCH --time=01:00:00
 
-$SLURM_JOB_ID
-
 echo "========================"
 echo "running on:       $(hostname)"
 echo "job_id            $SLURM_JOB_ID"
@@ -18,13 +16,14 @@ echo "directory:        $(pwd)"
 echo "date:             $(date)"
 echo "========================"
 
-cd
-cd uni/Parallel-Sample-Sort/Parallel/
+cd $HOME/uni/Parallel-Sample-Sort/Parallel/
 
-module load mpi/latest
+module load openMPI/5.0.5
 
+# Compile the code
 make clean
 make
+
 make run
 
 echo "========================"
