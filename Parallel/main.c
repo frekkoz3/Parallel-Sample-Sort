@@ -202,9 +202,6 @@ int main (int argc, char **argv) {
 
   int boundary_err = 0;
   sort_key_t following_first;
-
-  int boundary_err = 0;
-  sort_key_t following_first;
   MPI_Request reqs[2];
   int n_reqs = 0;
 
