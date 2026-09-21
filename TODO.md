@@ -7,18 +7,20 @@
 * [x] Implemententing new merging strategy
 * [x] Implementing a parallel verifier
 * [x] Adding the MPI part
-* [ ] Developing a simple analyzer and visualizer for the results (Python side)
+* [x] Developing a simple analyzer and visualizer for the results (Python side)
 
 ### Experiment Side [HPC]
 
-* [ ] Keys' size 32/64 bits : Radix vs Quick sort comparison
-* [ ] Local Sort comparison (see also `perf stat -e branch-misses`)
-* [ ] Merging Algorithms comparison
+* [x] Keys' size 32/64 bits : Radix vs Quick sort comparison
+* [x] Local Sort comparison (see also `perf stat -e branch-misses`)
+* [x] Merging Algorithms comparison
 * [ ] Data Distribution comparison
 * [ ] Bandwidth achieved versus the Injection Rate of the network
 * [ ] Point-to-point instead of `MPI_Alltoallv`
-* [ ] Strong Scaling (fix $N$, vary $P$)
+* [x] Strong Scaling (fix $N$, vary $P$)
 * [ ] Weak Scaling (fix $N/P$, vary $P$)
+
+Notice : to run some additional profiling.
 
 ## Cloud Computing
 
