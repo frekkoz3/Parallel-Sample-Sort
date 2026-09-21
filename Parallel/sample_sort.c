@@ -538,7 +538,6 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   // then we just k-way merge the received array into output
   // here begin probably the biggest bottleneck of the problem:
   // we must use a MPI_Alltoallv operation in order to 
-  t0 = MPI_Wtime();
 
   // start by computing the # of keys each rank send to every other rank.
   // the v stands exactly for "variable" number of ...
@@ -581,9 +580,16 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   // this will be need later in the main 
   out_nkeys[rank] = total_recv_keys;
 
+  t0 = MPI_Wtime();
   // here finally our MPI_Alltoallv
   MPI_Alltoallv(keys, send_counts, send_offset, MPI_SORT_KEY_T, recv_buffer, recv_counts, recv_offset, MPI_SORT_KEY_T, MPI_COMM_WORLD);
-
+  t1 = MPI_Wtime();
+  timing->communication = t1 - t0;
+  // A parallel step is only as fast as its slowest process.
+  MPI_Reduce(&timing->communication, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  if (rank == 0) {
+      timing->communication = t_max_elapsed;
+  }
   // each received segment corresponds to one source rank
   // we now compute each local bound
   size_t *local_bounds = malloc_array((size_t)nranks + 1, sizeof(size_t));
@@ -594,6 +600,8 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   {
       local_bounds[i + 1] = local_bounds[i] + recv_counts[i];
   }
+
+  t0 = MPI_Wtime();
 
   // we finally merge the received streams from all the ranks
   merge_local_destination_buckets(recv_buffer, local_bounds, options->nbuckets, *output, options->merging);

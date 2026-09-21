@@ -103,6 +103,7 @@ typedef struct {
   double merging;
   double sort_verification;
   double signature_verification;
+  double communication;
   double total;
 } timing_t;
 

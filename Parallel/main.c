@@ -36,6 +36,7 @@ static void print_summary (options_t *options, timing_t *timing, signature_t bef
   printf ("time_partition_seconds   %.9f\n", timing->partitioning);
   printf ("time_merge_seconds       %.9f\n", timing->merging);
   printf ("time_verify_seconds      %.9f\n", timing->sort_verification);
+  printf ("time_communication       %.9f\n", timing->communication);
   printf ("time_total_seconds       %.9f\n", timing->total);
 }
 
