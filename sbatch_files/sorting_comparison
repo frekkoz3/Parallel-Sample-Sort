@@ -26,6 +26,10 @@ module load mpi/latest
 make clean
 make
 make sorting_comparison
+make sorting_comparison
+make sorting_comparison
+make sorting_comparison
+make sorting_comparison
 
 echo "========================"
 echo "finished work"

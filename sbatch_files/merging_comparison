@@ -29,6 +29,10 @@ export OMP_PROC_BIND=spread
 make clean
 make
 make merging_comparison
+make merging_comparison
+make merging_comparison
+make merging_comparison
+make merging_comparison
 
 echo "========================"
 echo "finished work"

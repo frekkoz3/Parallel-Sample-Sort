@@ -29,6 +29,10 @@ export OMP_PROC_BIND=spread
 make clean
 make
 make weak_scaling
+make weak_scaling
+make weak_scaling
+make weak_scaling
+make weak_scaling
 
 echo "========================"
 echo "finished work"
