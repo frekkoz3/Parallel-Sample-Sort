@@ -203,22 +203,34 @@ int main (int argc, char **argv) {
   int boundary_err = 0;
   sort_key_t following_first;
 
-  if (rank > 0 && rank < (nranks - 1)) {
-    MPI_Sendrecv(&output[0], 1, MPI_SORT_KEY_T, rank - 1, 0, &following_first, 1, MPI_SORT_KEY_T, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                
+  int boundary_err = 0;
+  sort_key_t following_first;
+  MPI_Request reqs[2];
+  int n_reqs = 0;
+
+  // post non-blocking receive from the next rank if we aren't the last rank
+  if (rank < nranks - 1) {
+    MPI_Irecv(&following_first, 1, MPI_SORT_KEY_T, rank + 1, 0, MPI_COMM_WORLD, &reqs[n_reqs++]);
+  }
+
+  // post non-blocking send to the previous rank if we aren't rank 0
+  if (rank > 0) {
+    MPI_Isend(&output[0], 1, MPI_SORT_KEY_T, rank - 1, 0, MPI_COMM_WORLD, &reqs[n_reqs++]);
+  }
+
+  // wait for all non-blocking communications to complete
+  if (n_reqs > 0) {
+    MPI_Waitall(n_reqs, reqs, MPI_STATUSES_IGNORE);
+  }
+
+  // following_first contains valid data, and output[0] has been safely sent
+  if (rank < nranks - 1) {
     if (out_nkeys > 0 && output[out_nkeys - 1] > following_first) {
-        boundary_err = 1;
-        bad_index = global_offset + out_nkeys; // first index of the following rank
-    }
-  } else if (rank > 0) {
-    MPI_Send(&output[0], 1, MPI_SORT_KEY_T, rank - 1, 0, MPI_COMM_WORLD);
-  } else if (rank < (nranks - 1)) {
-    MPI_Recv(&following_first, 1, MPI_SORT_KEY_T, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    if (out_nkeys > 0 && output[out_nkeys - 1] > following_first) {
-        boundary_err = 1;
-        bad_index = global_offset + out_nkeys; // first index of the following rank
+      boundary_err = 1;
+      bad_index = global_offset + out_nkeys; // first index of the following rank
     }
   }
+
   size_t global_bad_index = 0;
   MPI_Reduce(&bad_index, &global_bad_index, 1, MPI_SIZE_T, MPI_MIN, 0, MPI_COMM_WORLD);
 
