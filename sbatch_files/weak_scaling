@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #SBATCH --partition=GENOA
-#SBATCH --nodes=2
+#SBATCH --nodes=4
 #SBATCH --account=dssc
-#SBATCH --ntasks-per-node=32
+#SBATCH --ntasks-per-node=16
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=500G
 #SBATCH --output=weak_scaling.out
