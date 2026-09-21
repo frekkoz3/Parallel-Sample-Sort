@@ -5,7 +5,7 @@
 #SBATCH --account=dssc
 #SBATCH --ntasks-per-node=32
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=30G
+#SBATCH --mem=500G
 #SBATCH --output=merging_comparison.out
 #SBATCH --time=01:00:00
 

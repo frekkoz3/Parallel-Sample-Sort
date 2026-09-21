@@ -24,6 +24,9 @@ module load openMPI/5.0.5
 make clean
 make
 
+export OMP_PLACES=threads
+export OMP_PROC_BIND=spread
+
 make run
 
 echo "========================"

@@ -10,7 +10,7 @@ SRCS    = main.c parser.c utils.c local_sort.c sample_sort.c
 OBJS    = $(SRCS:.c=.o)
 
 # Default parallel dimensions
-RANKS   ?= 4
+RANKS   ?= 32
 THREADS ?= 4
 
 .PHONY: all clean run check
