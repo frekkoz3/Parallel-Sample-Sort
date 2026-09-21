@@ -83,6 +83,7 @@ static void save_results(options_t *options, timing_t *timing, int sorted_ok, in
   fprintf (file, "%.9f,", timing->local_sort);
   fprintf (file, "%.9f,", timing->sampling);
   fprintf (file, "%.9f,", timing->partitioning);
+  fprintf (file, "%.9f,", timing->communication);
   fprintf (file, "%.9f,", timing->merging);
   fprintf (file, "%.9f,", timing->sort_verification);
   fprintf (file, "%.9f\n", timing->total);
@@ -166,7 +167,7 @@ int main (int argc, char **argv) {
   if (nranks == 1){
     
     // skip this assuming everything fine (but just because is working in the other cases)
-    timing.partitioning = timing.merging = timing.signature_verification = timing.sort_verification = 0.0;
+    timing.partitioning = timing.communication = timing.merging = timing.signature_verification = timing.sort_verification = 0.0;
     timing.total = timing.local_sort + timing.generation;
     signature_t after_sig_all = before_sig_all;
     int sorted_ok = 1;
