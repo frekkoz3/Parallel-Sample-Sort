@@ -188,7 +188,7 @@ int main (int argc, char **argv) {
   // while &out_nkeys_all[rank] is passed as the sending buffer (sendbuf). This is strictly forbidden
   // in MPI standard. (sendbuf and recvbuf cannot point to overlapping memory regions in standard collective calls)
   // MPI_IN_PLACE exactly permit to do the opposite. Why is it safe to do it?
-  // in this case the index that could produce a data race are already safe.
+  // in this case the indexex that could produce a data race are already safe.
   
   size_t global_offset = 0;
   for (int r = 0; r < rank; r++)
