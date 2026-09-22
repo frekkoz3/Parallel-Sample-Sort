@@ -29,6 +29,9 @@ export OMP_PROC_BIND=spread
 make clean
 make
 make oversample_tuning
+make oversample_tuning
+make oversample_tuning
+make oversample_tuning
 
 echo "========================"
 echo "finished work"
