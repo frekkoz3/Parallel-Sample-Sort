@@ -6,3 +6,4 @@ o.out
 Parallel/sample_sort_mpi
 *.out
 .venv
+mpiP/
