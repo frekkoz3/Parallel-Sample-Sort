@@ -74,7 +74,9 @@ skewed_input: $(TARGET)
 
 point_to_point_communication: $(TARGET)
 	@echo "Running point-to-point communication experiment"
-	OMP_NUM_THREADS=2 mpirun -np 64 ./$(TARGET) --n 1000000000 --where_save ./results/point_to_point_communication.csv; \
+	@for number in 4 8 16 32 64 128 256; do \
+		OMP_NUM_THREADS=2 mpirun -np $$number ./$(TARGET) --n 1000000000 --where_save ./results/point_to_point_communication.csv; \
+	done
 
 clean:
 	rm -f $(OBJS) $(TARGET)
