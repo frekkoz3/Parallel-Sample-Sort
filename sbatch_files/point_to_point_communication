@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH --partition=GENOA
-#SBATCH --nodes=2
+#SBATCH --nodes=6
 #SBATCH --account=dssc
-#SBATCH --ntasks-per-node=32
-#SBATCH --cpus-per-task=2
+#SBATCH --ntasks-per-node=64
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=500G
 #SBATCH --output=point_to_point.out
 #SBATCH --time=01:00:00
