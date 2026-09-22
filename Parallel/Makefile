@@ -46,8 +46,8 @@ oversampling_tuning: $(TARGET)
 
 strong_scaling: $(TARGET)
 	@echo "Running strong scaling experiment"
-	@for number in 4 8 16 32 64; do \
-		OMP_NUM_THREADS=4 mpirun -np $$number ./$(TARGET) --n 1000000000 --where_save ./results/strong_scaling.csv; \
+	@for number in 4 8 16 32 64 128 256; do \
+		OMP_NUM_THREADS=1 mpirun -np $$number ./$(TARGET) --n 1000000000 --where_save ./results/strong_scaling.csv; \
 	done
 
 weak_scaling: $(TARGET)

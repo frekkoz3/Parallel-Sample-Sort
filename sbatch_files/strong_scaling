@@ -3,8 +3,8 @@
 #SBATCH --partition=GENOA
 #SBATCH --nodes=4
 #SBATCH --account=dssc
-#SBATCH --ntasks-per-node=16
-#SBATCH --cpus-per-task=4
+#SBATCH --ntasks-per-node=64
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=500G
 #SBATCH --output=strong_scaling.out
 #SBATCH --time=01:00:00
