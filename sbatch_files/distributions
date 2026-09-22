@@ -6,7 +6,7 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=30G
-#SBATCH --output=sorting_comparison.out
+#SBATCH --output=distributions.out
 #SBATCH --time=01:00:00
 
 $SLURM_JOB_ID
@@ -25,10 +25,10 @@ module load mpi/latest
 
 make clean
 make
-make sorting_comparison
-make sorting_comparison
-make sorting_comparison
-make sorting_comparison
+make distributions
+make distributions
+make distributions
+make distributions
 
 echo "========================"
 echo "finished work"
