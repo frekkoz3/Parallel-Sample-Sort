@@ -16,12 +16,11 @@
 * [x] Merging Algorithms comparison
 * [x] Oversample Tuning
 * [ ] Data Distribution comparison
+* [ ] Zipf Distribution
 * [ ] Bandwidth achieved versus the Injection Rate of the network
 * [ ] Point-to-point instead of `MPI_Alltoallv`
 * [x] Strong Scaling (fix $N$, vary $P$)
 * [x] Weak Scaling (fix $N/P$, vary $P$)
-
-Notice : to run some additional profiling.
 
 ## Cloud Computing
 
