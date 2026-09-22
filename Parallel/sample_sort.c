@@ -469,9 +469,11 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   // which must sort them and select global pivots -> common receiver = rank 0
   select_regular_samples(keys, nkeys, samples_per_chunk, local_samples);
 
+  double t0_communication = MPI_Wtime();
   // we send the local sample to rank 0. it will sort them
   MPI_Gather(local_samples, samples_per_chunk, MPI_SORT_KEY_T, samples, samples_per_chunk, MPI_SORT_KEY_T, 0, MPI_COMM_WORLD);
-  
+  double tf_communication = (MPI_Wtime() - t0_communication);
+
   free(local_samples);
 
   if (rank == 0){
@@ -496,8 +498,10 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
 
   free (samples);
 
+  t0_communication = MPI_Wtime();
   // finally we send the pivots to all the ranks
   MPI_Bcast(pivots, (options->nbuckets - 1), MPI_SORT_KEY_T, 0, MPI_COMM_WORLD);
+  tf_communication += MPI_Wtime() - t0_communication;
 
   t1 = MPI_Wtime();
 
@@ -557,8 +561,10 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
 
   free (bounds);
 
+  t0_communication = MPI_Wtime();
   // now w find out how many keys we receive from each rank
   MPI_Alltoall(send_counts, 1, MPI_INT, recv_counts, 1, MPI_INT, MPI_COMM_WORLD);
+  tf_communication += (MPI_Wtime() - t0_communication);
 
   // we compute the prefix sum of receive counts
   recv_offset[0] = 0;
@@ -580,16 +586,13 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
   // this will be need later in the main 
   out_nkeys[rank] = total_recv_keys;
 
-  t0 = MPI_Wtime();
+  t0_communication = MPI_Wtime();
   // here finally our MPI_Alltoallv
   MPI_Alltoallv(keys, send_counts, send_offset, MPI_SORT_KEY_T, recv_buffer, recv_counts, recv_offset, MPI_SORT_KEY_T, MPI_COMM_WORLD);
-  t1 = MPI_Wtime();
-  timing->communication = t1 - t0;
-  // A parallel step is only as fast as its slowest process.
-  MPI_Reduce(&timing->communication, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-  if (rank == 0) {
-      timing->communication = t_max_elapsed;
-  }
+  tf_communication += (MPI_Wtime() - t0_communication);
+
+  timing->communication = tf_communication;
+  
   // each received segment corresponds to one source rank
   // we now compute each local bound
   size_t *local_bounds = malloc_array((size_t)nranks + 1, sizeof(size_t));

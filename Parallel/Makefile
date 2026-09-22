@@ -3,14 +3,14 @@ CC      = mpicc
 CFLAGS  ?= -std=c11 -O3 -Wall -Wextra -pedantic -fopenmp
 LDFLAGS ?=
 LDLIBS  ?= -fopenmp
-BITSIZE ?= -DUSE_UINT32 # Un-comment for 32-bit keys
+BITSIZE ?= #-DUSE_UINT32 # Un-comment for 32-bit keys
 
 TARGET  = sample_sort_mpi
 SRCS    = main.c parser.c utils.c local_sort.c sample_sort.c
 OBJS    = $(SRCS:.c=.o)
 
 # Default parallel dimensions
-RANKS   ?= 64
+RANKS   ?= 4
 THREADS ?= 4
 
 .PHONY: all clean run check

@@ -162,7 +162,8 @@ int main (int argc, char **argv) {
   }
 
   sample_sort (keys, &output, local_nkeys, out_nkeys_all, &options, &timing);
-  
+  double tf_communication = timing.communication;
+
   // this is needed just for the local sort comparison
   if (nranks == 1){
     
@@ -183,7 +184,10 @@ int main (int argc, char **argv) {
 
   // now we must recompute the global offset!!!
   // because once the sample sort is happened different chunks have different sizes
+  double t0_communication = MPI_Wtime();
   MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, out_nkeys_all, 1, MPI_SIZE_T, MPI_COMM_WORLD);
+  tf_communication += (MPI_Wtime() - t0_communication);
+
   // MPI_Allgather(&out_nkeys_all[rank], 1, MPI_SIZE_T, out_nkeys_all, 1, MPI_SIZE_T, MPI_COMM_WORLD);
   // why not this? why MPI_IN_PLACE? without it, it throw "Fatal error in internal_Allgather: Buffers must not be aliased".
   // this is caused by the fact that out_nkeys_all is passed as the receiving buffer (recvbuf),
@@ -207,6 +211,7 @@ int main (int argc, char **argv) {
   MPI_Request reqs[2];
   int n_reqs = 0;
 
+  t0_communication = MPI_Wtime();
   // post non-blocking receive from the next rank if we aren't the last rank
   if (rank < nranks - 1) {
     MPI_Irecv(&following_first, 1, MPI_SORT_KEY_T, rank + 1, 0, MPI_COMM_WORLD, &reqs[n_reqs++]);
@@ -220,6 +225,15 @@ int main (int argc, char **argv) {
   // wait for all non-blocking communications to complete
   if (n_reqs > 0) {
     MPI_Waitall(n_reqs, reqs, MPI_STATUSES_IGNORE);
+  }
+
+  tf_communication += (MPI_Wtime() - t0_communication);
+  timing.communication = tf_communication;
+
+  // A parallel step is only as fast as its slowest process.
+  MPI_Reduce(&timing.communication, &t_max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  if (rank == 0) {
+      timing.communication = t_max_elapsed;
   }
 
   // following_first contains valid data, and output[0] has been safely sent
