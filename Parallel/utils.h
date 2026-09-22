@@ -9,7 +9,7 @@
 // #include <mpi.h>
 
 #define DEFAULT_NKEYS          (1000000ULL)
-#define DEFAULT_OVERSAMPLE     (1ULL)
+#define DEFAULT_OVERSAMPLE     (16ULL)
 #define DEFAULT_SEED           (1ULL)
 #define DEFAULT_DISTRIBUTION   "uniform"
 #define DEFAULT_SORT           "radix"

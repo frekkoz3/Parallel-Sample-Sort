@@ -14,11 +14,12 @@
 * [x] Keys' size 32/64 bits : Radix vs Quick sort comparison
 * [x] Local Sort comparison (see also `perf stat -e branch-misses`)
 * [x] Merging Algorithms comparison
+* [x] Oversample Tuning
 * [ ] Data Distribution comparison
 * [ ] Bandwidth achieved versus the Injection Rate of the network
 * [ ] Point-to-point instead of `MPI_Alltoallv`
 * [x] Strong Scaling (fix $N$, vary $P$)
-* [ ] Weak Scaling (fix $N/P$, vary $P$)
+* [x] Weak Scaling (fix $N/P$, vary $P$)
 
 Notice : to run some additional profiling.
 
