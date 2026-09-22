@@ -41,8 +41,11 @@ merging_comparison: $(TARGET)
 		OMP_NUM_THREADS=2 mpirun -np $$number ./$(TARGET) --n 50000000 --merging_strat heap  --where_save ./results/merging_comparison.csv; \
 	done
 
-oversampling_tuning: $(TARGET)
+oversample_tuning: $(TARGET)
 	@echo "Searching for the optimal oversampling factor"
+	@for number in 1 2 4 8 16 32 64; do \
+		OMP_NUM_THREADS=8 mpirun -np 8 ./$(TARGET) --n 50000000 --oversample $$number --where_save ./results/oversample_tuning.csv; \
+	done
 
 strong_scaling: $(TARGET)
 	@echo "Running strong scaling experiment"
