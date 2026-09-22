@@ -3,8 +3,8 @@
 #SBATCH --partition=GENOA
 #SBATCH --nodes=1
 #SBATCH --account=dssc
-#SBATCH --ntasks-per-node=8
-#SBATCH --cpus-per-task=8
+#SBATCH --ntasks-per-node=64
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=50G
 #SBATCH --output=oversample_tuning.out
 #SBATCH --time=01:00:00

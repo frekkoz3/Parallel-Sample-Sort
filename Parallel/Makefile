@@ -44,7 +44,7 @@ merging_comparison: $(TARGET)
 oversample_tuning: $(TARGET)
 	@echo "Searching for the optimal oversampling factor"
 	@for number in 1 2 4 8 16 32 64; do \
-		OMP_NUM_THREADS=8 mpirun -np 8 ./$(TARGET) --n 50000000 --oversample $$number --where_save ./results/oversample_tuning.csv; \
+		OMP_NUM_THREADS=1 mpirun -np 64 ./$(TARGET) --n 50000000 --oversample $$number --where_save ./results/oversample_tuning.csv; \
 	done
 
 strong_scaling: $(TARGET)
