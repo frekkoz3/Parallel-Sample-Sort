@@ -3,7 +3,7 @@
 #SBATCH --partition=GENOA
 #SBATCH --nodes=1
 #SBATCH --account=dssc
-#SBATCH --ntasks-per-node=2
+#SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=50G
 #SBATCH --output=oversampling_tuning.out
