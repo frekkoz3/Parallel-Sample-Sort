@@ -15,9 +15,8 @@
 * [x] Local Sort comparison (see also `perf stat -e branch-misses`)
 * [x] Merging Algorithms comparison
 * [x] Oversample Tuning
-* [ ] Data Distribution comparison
-* [ ] Zipf Distribution
-* [ ] Bandwidth achieved versus the Injection Rate of the network
+* [x] Data Distribution comparison
+* [ ] Bandwidth achieved versus the Injection Rate of the network (osu)
 * [ ] Point-to-point instead of `MPI_Alltoallv`
 * [x] Strong Scaling (fix $N$, vary $P$)
 * [x] Weak Scaling (fix $N/P$, vary $P$)
