@@ -588,8 +588,8 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
 
   t0_communication = MPI_Wtime();
   // here finally our MPI_Alltoallv
-  MPI_Alltoallv(keys, send_counts, send_offset, MPI_SORT_KEY_T, recv_buffer, recv_counts, recv_offset, MPI_SORT_KEY_T, MPI_COMM_WORLD);
-  /*
+  //MPI_Alltoallv(keys, send_counts, send_offset, MPI_SORT_KEY_T, recv_buffer, recv_counts, recv_offset, MPI_SORT_KEY_T, MPI_COMM_WORLD);
+  
   for (int step = 0; step < nranks; step++) {
     int send_to = (rank + step) % nranks;
     int recv_from = (rank - step + nranks) % nranks;
@@ -601,7 +601,7 @@ void sample_sort (  sort_key_t    *keys,          // input keys, modified by loc
     );
   }// alternative to test the point-to-point communication 
   // this alternative create a circular dependency, so i think it will be something like P times slower 
-  */
+  
 
   tf_communication += (MPI_Wtime() - t0_communication);
 
