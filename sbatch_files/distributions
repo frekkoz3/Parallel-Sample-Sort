@@ -3,8 +3,8 @@
 #SBATCH --partition=GENOA
 #SBATCH --nodes=1
 #SBATCH --account=dssc
-#SBATCH --ntasks-per-node=8
-#SBATCH --cpus-per-task=8
+#SBATCH --ntasks-per-node=16
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=30G
 #SBATCH --output=distributions.out
 #SBATCH --time=01:00:00

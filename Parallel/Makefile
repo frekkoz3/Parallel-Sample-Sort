@@ -49,12 +49,9 @@ oversample_tuning: $(TARGET)
 
 distributions: $(TARGET)
 	@echo "Stress testing the behavior of the algorithm based on different distributions"
-	OMP_NUM_THREADS=8 mpirun -np 8 ./$(TARGET) --n 100000000 --distribution uniform --where_save ./results/distributions.csv; \
-	OMP_NUM_THREADS=8 mpirun -np 8 ./$(TARGET) --n 100000000 --distribution skewed --where_save ./results/distributions.csv; \
-	OMP_NUM_THREADS=8 mpirun -np 8 ./$(TARGET) --n 100000000 --distribution few-unique --where_save ./results/distributions.csv; \
-	OMP_NUM_THREADS=8 mpirun -np 8 ./$(TARGET) --n 100000000 --distribution sorted --where_save ./results/distributions.csv; \
-	OMP_NUM_THREADS=8 mpirun -np 8 ./$(TARGET) --n 100000000 --distribution reverse --where_save ./results/distributions.csv; \
-	OMP_NUM_THREADS=8 mpirun -np 8 ./$(TARGET) --n 100000000 --distribution almost-sorted --where_save ./results/distributions.csv; \
+	OMP_NUM_THREADS=4 mpirun -np 16 ./$(TARGET) --n 1000000000 --distribution uniform --where_save ./results/distributions.csv; \
+	OMP_NUM_THREADS=4 mpirun -np 16 ./$(TARGET) --n 1000000000 --distribution skewed --where_save ./results/distributions.csv; \
+	OMP_NUM_THREADS=4 mpirun -np 16 ./$(TARGET) --n 1000000000 --distribution few-unique --where_save ./results/distributions.csv; \
 
 strong_scaling: $(TARGET)
 	@echo "Running strong scaling experiment"
