@@ -25,7 +25,7 @@ print_usage ( char     *program_name   // executable name from argv[0]
            "  --n VALUE              number of keys to sort                      (%llu)\n"
            "  --oversample VALUE     regular samples per virtual rank multiplier (%llu)\n"
            "  --seed VALUE           random seed for generated inputs            (%llu)\n"
-           "  --distribution NAME    uniform | skewed | few-unique | sorted | reverse | almost-sorted (%s)\n"
+           "  --distribution NAME    uniform | skewed | few-unique               (%s)\n"
            "  --sorting NAME         merge | quick | radix (%s)\n"
            "  --radix_bits VALUE     digit size for radix sort (%d)\n"
            "  --merging_strat NAME   final merging strategy basic | bin | heap (%s)\n"
