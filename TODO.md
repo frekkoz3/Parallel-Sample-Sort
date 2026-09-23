@@ -17,7 +17,7 @@
 * [x] Oversample Tuning
 * [x] Data Distribution comparison
 * [ ] Bandwidth achieved versus the Injection Rate of the network (osu)
-* [ ] Point-to-point instead of `MPI_Alltoallv`
+* [x] Point-to-point instead of `MPI_Alltoallv`
 * [x] Strong Scaling (fix $N$, vary $P$)
 * [x] Weak Scaling (fix $N/P$, vary $P$)
 
