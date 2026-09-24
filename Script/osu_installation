@@ -1,0 +1,8 @@
+cd ~/scratch
+wget https://mvapich.cse.ohio-state.edu/download/mvapich/osu-micro-benchmarks-7.4.tar.gz
+tar -xzf osu-micro-benchmarks-7.4.tar.gz
+cd osu-micro-benchmarks-7.4
+
+module load openMPI/4.1.6
+./configure CC=mpicc CXX=mpicxx
+make -j4

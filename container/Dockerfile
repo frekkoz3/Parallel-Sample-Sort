@@ -10,6 +10,14 @@ RUN apt-get update && apt-get install -y \
     libnuma-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Compile OSU Micro-Benchmarks inside the container
+RUN wget https://mvapich.cse.ohio-state.edu/download/mvapich/osu-micro-benchmarks-7.4.tar.gz && \
+    tar -xzf osu-micro-benchmarks-7.4.tar.gz && \
+    cd osu-micro-benchmarks-7.4 && \
+    ./configure CC=mpicc CXX=mpicxx --prefix=/opt/osu && \
+    make -j4 && make install && \
+    cd / && rm -rf /osu-micro-benchmarks-7.4*
+
 # Set working directory inside the container
 WORKDIR /app
 
@@ -24,9 +32,5 @@ RUN make all
 # PMIX (Process Management Interface Exchanger) as the same
 # of the system it will run on.
 ENV PMIX_MCA_psec=native
-# Allow OpenMPI to run as root within the container 
-# even if it should be Docker default
-ENV OMPI_ALLOW_RUN_AS_ROOT=1
-ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
 CMD ["/bin/bash"]
