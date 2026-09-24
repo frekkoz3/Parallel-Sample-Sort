@@ -21,7 +21,7 @@ echo "========================"
 cd
 cd uni/Parallel-Sample-Sort/Parallel/
 
-module load mpi/latest
+module load openMPI/5.0.5
 
 make clean
 make
