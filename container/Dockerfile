@@ -1,10 +1,10 @@
 # Base Operating System
 FROM ubuntu:24.04
 
-# Install build dependencies, OpenMPI, and libnuma
-# libnuma is useful if we will be able to do the numa study
+# Install build dependencies, OpenMPI, libnuma, and wget
 RUN apt-get update && apt-get install -y \
     build-essential \
+    wget \
     openmpi-bin \
     libopenmpi-dev \
     libnuma-dev \
@@ -28,9 +28,6 @@ COPY . /app
 RUN make all
 
 # Set required network and execution environment variables
-# in particular this environment variable ensure to use the
-# PMIX (Process Management Interface Exchanger) as the same
-# of the system it will run on.
 ENV PMIX_MCA_psec=native
 
 CMD ["/bin/bash"]
