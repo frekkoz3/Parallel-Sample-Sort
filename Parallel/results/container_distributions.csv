@@ -1,3 +1,4 @@
+n_key,n_bits,n_ranks,n_threads,oversample,distribution,local_sort_algorithm,merging_strategy,seed,sorted_ok,multiset_signature_ok,time_generation_seconds,time_local_sort_seconds,time_sampling_seconds,time_partition_seconds,time_communication_seconds,time_merge_seconds,time_verify_seconds,time_total_seconds
 1000000000,64,16,4,1,uniform,radix,bin,1,yes,yes,0.216639465,1.842527973,0.174416968,0.000031431,2.422268738,3.262909096,0.044384982,6.013625968
 1000000000,64,16,4,1,skewed,radix,bin,1,yes,yes,0.314145632,1.820936322,0.237107138,0.000124482,1.628467579,1.720611588,0.062742011,4.561576549
 1000000000,64,16,4,1,few-unique,radix,bin,1,yes,yes,0.210087098,1.867153054,0.242098280,0.000129633,1.585891228,1.603754987,0.087327972,4.416352756
