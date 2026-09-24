@@ -7,3 +7,4 @@ Parallel/sample_sort_mpi
 *.out
 .venv
 mpiP/
+container/sample_sort_local.tar
