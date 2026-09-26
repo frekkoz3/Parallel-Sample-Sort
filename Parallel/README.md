@@ -1,11 +1,3 @@
-# Parallel sample-sort baseline
+# Parallel Implementation
 
-## Algorithm Description
-
-## Optimization Strategies
-
-## OpenMP Usage
-
-## MPI Usage
-
-## Discussion
+Please referes to the final report.
