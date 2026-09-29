@@ -23,9 +23,6 @@ cd uni/Parallel-Sample-Sort/Parallel/
 
 module load openMPI/5.0.5
 
-export OMP_PLACES=threads
-export OMP_PROC_BIND=spread
-
 make clean
 make
 make skewed_input
